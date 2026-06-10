@@ -9,6 +9,7 @@ import UniformTypeIdentifiers
 enum SpriteDump {
     static func runIfRequested() {
         dumpIconIfRequested()
+        dumpVariantsIfRequested()
         guard let flagIndex = CommandLine.arguments.firstIndex(of: "--dump-sprites") else { return }
         let dir = CommandLine.arguments.count > flagIndex + 1
             ? CommandLine.arguments[flagIndex + 1]
@@ -23,6 +24,22 @@ enum SpriteDump {
             }
         }
         print("sprites dumped to \(dir)")
+        exit(0)
+    }
+
+    /// `--dump-variants <dir>` renders look-exploration variants of Kiki.
+    private static func dumpVariantsIfRequested() {
+        guard let flagIndex = CommandLine.arguments.firstIndex(of: "--dump-variants"),
+              CommandLine.arguments.count > flagIndex + 1 else { return }
+        let dir = CommandLine.arguments[flagIndex + 1]
+        try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+
+        for (key, grid, palette) in KikiVariants.all {
+            guard let image = PixelArt.image(from: grid, palette: palette),
+                  let scaled = upscale(image, factor: 8) else { continue }
+            write(scaled, to: "\(dir)/\(key).png")
+        }
+        print("variants dumped to \(dir)")
         exit(0)
     }
 

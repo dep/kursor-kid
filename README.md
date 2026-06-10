@@ -1,7 +1,6 @@
 # Kursor Kid 👾
 
-A macOS menu bar app that puts **Kiki** — a pixel-art cyberpunk girl with
-blonde dutch braids — on your screen. She walks along the bottom edge,
+A macOS menu bar app that puts **Kiki** — a pixel-art cyberpunk girl on your screen. She walks along the bottom edge,
 reacts to your cursor, dances when you type, gets booped when you click her,
 and says funny things powered by Claude Haiku.
 

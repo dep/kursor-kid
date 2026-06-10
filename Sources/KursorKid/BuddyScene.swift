@@ -13,7 +13,8 @@ final class BuddyScene: SKScene {
     /// Called on every state transition with the previous state's duration.
     var onStateChange: ((BuddyState, BuddyState, TimeInterval) -> Void)?
 
-    private let sprite = SKSpriteNode(texture: SpriteTextures.idle[0])
+    private let sprite = SKSpriteNode(texture: SpriteTextures.idle[.center]?.first)
+    private var eyeDirection: KikiSprites.EyeDirection = .center
     private let bubble = SpeechBubble()
     private var lastAppliedState: BuddyState?
     private var stateEnteredAt: TimeInterval = 0
@@ -61,6 +62,7 @@ final class BuddyScene: SKScene {
             engine.handle(.tick(now: currentTime, cursorDistance: distance, cursorX: cursor.x))
         }
         syncState(now: currentTime)
+        updateEyeDirection(cursorX: cursor.x, spriteX: spriteCenter.x)
         updateClickThrough(cursor: cursor)
         bubble.position = CGPoint(x: sprite.position.x, y: sprite.position.y + spriteHeight + 26)
 
@@ -87,7 +89,7 @@ final class BuddyScene: SKScene {
 
         switch state {
         case .idle:
-            loop(SpriteTextures.idle, timePerFrame: 0.6)
+            loop(SpriteTextures.idle[eyeDirection]!, timePerFrame: 0.6)
         case let .wander(targetX):
             let margin: CGFloat = 60
             let target = margin + targetX * (size.width - margin * 2)
@@ -103,8 +105,8 @@ final class BuddyScene: SKScene {
                 .moveBy(x: 0, y: -6, duration: 0.16),
             ])), withKey: "bounce")
         case .wave:
-            face(towards: NSEvent.mouseLocation.x)
-            loop(SpriteTextures.wave, timePerFrame: 0.25)
+            // Front-facing art: her eyes (not a body flip) track the cursor.
+            loop(SpriteTextures.wave[eyeDirection]!, timePerFrame: 0.25)
         case .startled:
             sprite.texture = SpriteTextures.startled[0]
             sprite.run(.sequence([
@@ -122,7 +124,7 @@ final class BuddyScene: SKScene {
                 .run { [weak self] in self?.finishOneShot() },
             ]), withKey: "move")
         case .sit:
-            sprite.texture = SpriteTextures.sit[0]
+            sprite.texture = SpriteTextures.sit[eyeDirection]![0]
         case .sleep:
             loop(SpriteTextures.sleep, timePerFrame: 0.9)
         case .dragged:
@@ -143,6 +145,27 @@ final class BuddyScene: SKScene {
 
     private func loop(_ textures: [SKTexture], timePerFrame: TimeInterval) {
         sprite.run(.repeatForever(.animate(with: textures, timePerFrame: timePerFrame)), withKey: "anim")
+    }
+
+    // MARK: - Cursor-following eyes
+
+    private func updateEyeDirection(cursorX: CGFloat, spriteX: CGFloat) {
+        let dx = cursorX - spriteX
+        let newDirection: KikiSprites.EyeDirection = dx < -28 ? .left : (dx > 28 ? .right : .center)
+        guard newDirection != eyeDirection else { return }
+        eyeDirection = newDirection
+
+        // Refresh the current animation only for stationary, eyes-open states.
+        switch engine.state {
+        case .idle:
+            loop(SpriteTextures.idle[eyeDirection]!, timePerFrame: 0.6)
+        case .wave:
+            loop(SpriteTextures.wave[eyeDirection]!, timePerFrame: 0.25)
+        case .sit:
+            sprite.texture = SpriteTextures.sit[eyeDirection]![0]
+        default:
+            break
+        }
     }
 
     private func walk(to targetX: CGFloat, speed: CGFloat, textures: [SKTexture], timePerFrame: TimeInterval, now: TimeInterval) {
@@ -229,10 +252,10 @@ final class BuddyScene: SKScene {
         bubble.show(text, screenWidth: size.width, buddyX: sprite.position.x)
         if engine.state == .idle {
             sprite.run(.sequence([
-                .repeat(.animate(with: SpriteTextures.talk, timePerFrame: 0.22), count: 4),
+                .repeat(.animate(with: SpriteTextures.talk[eyeDirection]!, timePerFrame: 0.22), count: 4),
                 .run { [weak self] in
                     guard let self, self.engine.state == .idle else { return }
-                    self.loop(SpriteTextures.idle, timePerFrame: 0.6)
+                    self.loop(SpriteTextures.idle[self.eyeDirection]!, timePerFrame: 0.6)
                 },
             ]), withKey: "anim")
         }

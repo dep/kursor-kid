@@ -2,16 +2,20 @@ import KursorKidCore
 import SpriteKit
 
 /// Converts KikiSprites pixel grids into crisp (nearest-filtered) SKTextures.
+/// Stationary animations are keyed by gaze direction for cursor-following eyes.
 enum SpriteTextures {
-    static let idle = textures(KikiSprites.idle)
+    typealias EyeDirection = KikiSprites.EyeDirection
+
+    static let idle = directional(KikiSprites.idleFrames)
+    static let wave = directional(KikiSprites.waveFrames)
+    static let sit = directional(KikiSprites.sitFrames)
+    static let talk = directional(KikiSprites.talkFrames)
+
     static let walk = textures(KikiSprites.walk)
     static let dance = textures(KikiSprites.dance)
-    static let wave = textures(KikiSprites.wave)
     static let startled = textures(KikiSprites.startled)
     static let boop = textures(KikiSprites.boop)
-    static let sit = textures(KikiSprites.sit)
     static let sleep = textures(KikiSprites.sleep)
-    static let talk = textures(KikiSprites.talk)
 
     /// A tiny pink heart used for boop particles.
     static let heart: SKTexture = {
@@ -24,6 +28,12 @@ enum SpriteTextures {
         ]
         return texture(grid)
     }()
+
+    private static func directional(
+        _ builder: (EyeDirection) -> [[String]]
+    ) -> [EyeDirection: [SKTexture]] {
+        Dictionary(uniqueKeysWithValues: EyeDirection.allCases.map { ($0, textures(builder($0))) })
+    }
 
     private static func textures(_ frames: [[String]]) -> [SKTexture] {
         frames.map(texture)

@@ -36,13 +36,34 @@ public enum KikiSprites {
         ".....HHHHHHHHHHHHHH",
     ]
 
-    // Face block rows 5-10. Eyes + mouth swap per expression. `handRow`
-    // appends a raised hand beside the head (for waving).
-    static func face(eyes: String, mouth: String, handRow: Int? = nil) -> [String] {
+    // MARK: - Eyes (two-row anime style, 10 chars per row)
+
+    public enum EyeDirection: CaseIterable, Sendable {
+        case left, center, right
+    }
+
+    /// Big two-row sparkle eyes. Gaze direction = the whole eye block shifted
+    /// one pixel within the face.
+    static func eyeRows(_ direction: EyeDirection) -> (top: String, bottom: String) {
+        switch direction {
+        case .center: ("SOWOSSOWOS", "SOOOSSOOOS")
+        case .left: ("OWOSSOWOSS", "OOOSSOOOSS")
+        case .right: ("SSOWOSSOWO", "SSOOOSSOOO")
+        }
+    }
+
+    static let eyesClosed = (top: "SSSSSSSSSS", bottom: "SOOOSSOOOS")
+
+    static let mouthSmile = "SSOOSS"
+    static let mouthOpen = "SOOOOS"
+
+    // Face block rows 5-10: hairline, eye top (with hair edges), eye bottom,
+    // blush, mouth, chin. `handRow` appends a raised hand beside the head.
+    static func face(eyes: (top: String, bottom: String), mouth: String, handRow: Int? = nil) -> [String] {
         var rows = [
             ".....hHHSSSSSSSSHHh",
-            "....hhHSSSSSSSSSSHhh",
-            "....hh.S" + eyes + "S.hh",   // eyes: 8 chars
+            "....hhH" + eyes.top + "Hhh",
+            "....hh." + eyes.bottom + ".hh",
             "....hh.SRSSSSSSRS.hh",
             "....hh.SS" + mouth + "SS.hh", // mouth: 6 chars
             ".....h..SSSSSSSS..h",
@@ -52,12 +73,6 @@ public enum KikiSprites {
         }
         return rows
     }
-
-    static let eyesOpen = "OWSSSSOW"
-    static let eyesClosed = "OOSSSSOO"
-    static let mouthSmile = "SSOOSS"
-    static let mouthOpen = "SOOOOS"
-    static let mouthOh = "SSOOSS"
 
     // Torso block rows 11-15. Variants for arm poses.
     static let torsoArmsDown = [
@@ -129,12 +144,12 @@ public enum KikiSprites {
 
     // MARK: - Frame assembly
 
-    static func standing(eyes: String, mouth: String, torso: [String], legs: [String], handRow: Int? = nil) -> [String] {
+    static func standing(eyes: (top: String, bottom: String), mouth: String, torso: [String], legs: [String], handRow: Int? = nil) -> [String] {
         [blank] + hairTop + face(eyes: eyes, mouth: mouth, handRow: handRow) + torso + legs + [blank]
     }
 
     /// Sitting pose: body dropped four rows, legs folded in front.
-    static func sitting(eyes: String, mouth: String) -> [String] {
+    static func sitting(eyes: (top: String, bottom: String), mouth: String) -> [String] {
         [
             blank, blank, blank, blank,
             ".........HHHHHH",
@@ -142,8 +157,8 @@ public enum KikiSprites {
             "......HHHHHHHHHHHH",
             ".....HHHHHHHHHHHHHH",
             ".....hHHSSSSSSSSHHh",
-            "....hhHSSSSSSSSSSHhh",
-            "....hh.S" + eyes + "S.hh",
+            "....hhH" + eyes.top + "Hhh",
+            "....hh." + eyes.bottom + ".hh",
             "....hh.SRSSSSSSRS.hh",
             "....hh.SS" + mouth + "SS.hh",
             ".....h..SSSSSSSS..h",
@@ -161,40 +176,59 @@ public enum KikiSprites {
 
     // MARK: - Animations
 
-    public static let idle: [[String]] = [
-        standing(eyes: eyesOpen, mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand),
-        standing(eyes: eyesClosed, mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand),
-    ]
+    /// Stationary animations come in three gaze directions so Kiki's eyes can
+    /// follow the cursor. Moving animations always look straight ahead.
+
+    public static func idleFrames(_ direction: EyeDirection) -> [[String]] {
+        [
+            standing(eyes: eyeRows(direction), mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand),
+            standing(eyes: eyesClosed, mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand),
+        ]
+    }
+
+    public static func waveFrames(_ direction: EyeDirection) -> [[String]] {
+        [
+            standing(eyes: eyeRows(direction), mouth: mouthSmile, torso: torsoWaveArm, legs: legsStand, handRow: 1),
+            standing(eyes: eyeRows(direction), mouth: mouthOpen, torso: torsoWaveArm, legs: legsStand, handRow: 3),
+        ]
+    }
+
+    public static func sitFrames(_ direction: EyeDirection) -> [[String]] {
+        [sitting(eyes: eyeRows(direction), mouth: mouthSmile)]
+    }
+
+    public static func talkFrames(_ direction: EyeDirection) -> [[String]] {
+        [
+            standing(eyes: eyeRows(direction), mouth: mouthOpen, torso: torsoArmsDown, legs: legsStand),
+            standing(eyes: eyeRows(direction), mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand),
+        ]
+    }
+
+    public static let idle = idleFrames(.center)
+    public static let wave = waveFrames(.center)
+    public static let sit = sitFrames(.center)
+    public static let talk = talkFrames(.center)
 
     public static let walk: [[String]] = [
-        standing(eyes: eyesOpen, mouth: mouthSmile, torso: torsoArmsDown, legs: legsSpread),
-        standing(eyes: eyesOpen, mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand),
-        standing(eyes: eyesOpen, mouth: mouthSmile, torso: torsoArmsDown, legs: legsSpread),
+        standing(eyes: eyeRows(.center), mouth: mouthSmile, torso: torsoArmsDown, legs: legsSpread),
+        standing(eyes: eyeRows(.center), mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand),
+        standing(eyes: eyeRows(.center), mouth: mouthSmile, torso: torsoArmsDown, legs: legsSpread),
         standing(eyes: eyesClosed, mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand),
     ]
 
     public static let dance: [[String]] = [
-        standing(eyes: eyesOpen, mouth: mouthOpen, torso: torsoArmsUp, legs: legsKickLeft),
+        standing(eyes: eyeRows(.center), mouth: mouthOpen, torso: torsoArmsUp, legs: legsKickLeft),
         standing(eyes: eyesClosed, mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand),
-        standing(eyes: eyesOpen, mouth: mouthOpen, torso: torsoArmsUp, legs: legsKickRight),
+        standing(eyes: eyeRows(.center), mouth: mouthOpen, torso: torsoArmsUp, legs: legsKickRight),
         standing(eyes: eyesClosed, mouth: mouthSmile, torso: torsoArmsDown, legs: legsSpread),
     ]
 
-    public static let wave: [[String]] = [
-        standing(eyes: eyesOpen, mouth: mouthSmile, torso: torsoWaveArm, legs: legsStand, handRow: 1),
-        standing(eyes: eyesOpen, mouth: mouthOpen, torso: torsoWaveArm, legs: legsStand, handRow: 3),
-    ]
-
     public static let startled: [[String]] = [
-        standing(eyes: eyesOpen, mouth: mouthOh, torso: torsoArmsUp, legs: legsSpread),
+        standing(eyes: eyeRows(.center), mouth: mouthOpen, torso: torsoArmsUp, legs: legsSpread),
     ]
 
     public static let boop: [[String]] = [
         standing(eyes: eyesClosed, mouth: mouthOpen, torso: torsoArmsDown, legs: legsStand),
-    ]
-
-    public static let sit: [[String]] = [
-        sitting(eyes: eyesOpen, mouth: mouthSmile),
     ]
 
     public static let sleep: [[String]] = [
@@ -202,13 +236,17 @@ public enum KikiSprites {
         sitting(eyes: eyesClosed, mouth: mouthOpen),
     ]
 
-    public static let talk: [[String]] = [
-        standing(eyes: eyesOpen, mouth: mouthOpen, torso: torsoArmsDown, legs: legsStand),
-        standing(eyes: eyesOpen, mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand),
-    ]
-
-    public static let allAnimations: [String: [[String]]] = [
-        "idle": idle, "walk": walk, "dance": dance, "wave": wave,
-        "startled": startled, "boop": boop, "sit": sit, "sleep": sleep, "talk": talk,
-    ]
+    public static let allAnimations: [String: [[String]]] = {
+        var animations: [String: [[String]]] = [
+            "walk": walk, "dance": dance, "startled": startled,
+            "boop": boop, "sleep": sleep,
+        ]
+        for direction in EyeDirection.allCases {
+            animations["idle-\(direction)"] = idleFrames(direction)
+            animations["wave-\(direction)"] = waveFrames(direction)
+            animations["sit-\(direction)"] = sitFrames(direction)
+            animations["talk-\(direction)"] = talkFrames(direction)
+        }
+        return animations
+    }()
 }
