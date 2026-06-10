@@ -44,6 +44,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             window.orderFrontRegardless()
         }
         quips.timeOfDayGreetingIfFresh()
+        scheduleSelfShotIfRequested(view: skView)
+    }
+
+    /// Dev utility: `--self-shot <path>` renders the scene to a PNG after a
+    /// short warmup so behavior can be verified without screen recording
+    /// permission. `--demo-bubble` shows a canned line first.
+    private func scheduleSelfShotIfRequested(view: SKView) {
+        guard let flagIndex = CommandLine.arguments.firstIndex(of: "--self-shot"),
+              CommandLine.arguments.count > flagIndex + 1 else { return }
+        let path = CommandLine.arguments[flagIndex + 1]
+        if CommandLine.arguments.contains("--demo-bubble") {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+                self?.scene.showBubble(CannedQuips.line(for: .clicked))
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) { [weak self] in
+            guard let self, let texture = view.texture(from: self.scene),
+                  let cg = texture.cgImage() as CGImage? else {
+                print("self-shot failed")
+                NSApp.terminate(nil)
+                return
+            }
+            let rep = NSBitmapImageRep(cgImage: cg)
+            try? rep.representation(using: .png, properties: [:])?
+                .write(to: URL(fileURLWithPath: path))
+            print("self-shot written to \(path)")
+            NSApp.terminate(nil)
+        }
     }
 
     private func wireCallbacks() {
