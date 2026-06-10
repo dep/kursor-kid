@@ -12,6 +12,15 @@ public enum BuddyState: Equatable {
     case sit
     case sleep
     case dragged
+    /// Claude Code activity states (driven by hook events via URL scheme).
+    case claudeThinking
+    case claudeWorking
+    case claudeWaiting
+}
+
+/// What Claude Code is up to, as reported by its hooks.
+public enum ClaudeStatus: String, Equatable, Sendable {
+    case thinking, working, waiting
 }
 
 public enum BuddyEvent: Equatable {
@@ -25,6 +34,8 @@ public enum BuddyEvent: Equatable {
     case dragEnded(now: TimeInterval)
     /// The scene finished playing a one-shot animation or completed a walk.
     case animationFinished(now: TimeInterval)
+    /// Claude Code hook event. `nil` clears (done / session end).
+    case claudeStatus(ClaudeStatus?, now: TimeInterval)
 }
 
 /// Pure state machine driving Kiki's behavior. No AppKit/SpriteKit — fully
@@ -43,6 +54,8 @@ public final class BehaviorEngine {
         public var wanderInterval: ClosedRange<CGFloat> = 5...20
         public var sitChance: CGFloat = 0.3
         public var sitDuration: TimeInterval = 10
+        /// A Claude status with no refresh for this long is considered stale.
+        public var claudeStatusTimeout: TimeInterval = 180
         public init() {}
     }
 
@@ -62,6 +75,8 @@ public final class BehaviorEngine {
     private var farSince: TimeInterval?
     private var nextWanderAt: TimeInterval?
     private var sitUntil: TimeInterval = 0
+    public private(set) var claudeStatus: ClaudeStatus?
+    private var claudeStatusAt: TimeInterval = 0
 
     public init(
         config: Config = Config(),
@@ -85,12 +100,31 @@ public final class BehaviorEngine {
             state = .dragged
         case let .dragEnded(now):
             registerActivity(at: now)
-            state = .idle
+            state = restingState()
             nextWanderAt = now + TimeInterval(random(config.wanderInterval))
         case let .animationFinished(now):
             handleAnimationFinished(now: now)
+        case let .claudeStatus(status, now):
+            handleClaudeStatus(status, now: now)
         }
         return state
+    }
+
+    private func handleClaudeStatus(_ status: ClaudeStatus?, now: TimeInterval) {
+        claudeStatus = status
+        claudeStatusAt = now
+        guard state != .dragged, state != .boop else { return }
+        switch status {
+        case .thinking: state = .claudeThinking
+        case .working: state = .claudeWorking
+        case .waiting: state = .claudeWaiting
+        case nil:
+            if isClaudeState(state) { state = .idle }
+        }
+    }
+
+    private func isClaudeState(_ state: BuddyState) -> Bool {
+        state == .claudeThinking || state == .claudeWorking || state == .claudeWaiting
     }
 
     // MARK: - Event handlers
@@ -132,6 +166,15 @@ public final class BehaviorEngine {
 
         // One-shot / override states don't transition on ticks.
         if state == .dragged || state == .boop || state == .startled { return }
+
+        // Claude activity pins her state until cleared, refreshed, or stale.
+        if isClaudeState(state) {
+            if now - claudeStatusAt > config.claudeStatusTimeout {
+                claudeStatus = nil
+                state = .idle
+            }
+            return
+        }
 
         // Startle (close cursor) — one-shot with cooldown. Not while asleep.
         if distance < config.startleDistance,
@@ -190,7 +233,8 @@ public final class BehaviorEngine {
         if keystrokes.count >= config.typingKeysPerSecond {
             if let since = typingSustainedSince {
                 if now - since >= config.typingSustain,
-                   state != .dragged, state != .boop, state != .startled {
+                   state != .dragged, state != .boop, state != .startled,
+                   !isClaudeState(state) {
                     state = .dance
                 }
             } else {
@@ -206,9 +250,13 @@ public final class BehaviorEngine {
     private func handleAnimationFinished(now: TimeInterval) {
         switch state {
         case .boop:
-            state = .idle
+            state = restingState()
         case .startled:
-            state = lastCursorDistance < config.waveDistance ? .wave : .idle
+            if claudeStatus != nil {
+                state = restingState()
+            } else {
+                state = lastCursorDistance < config.waveDistance ? .wave : .idle
+            }
         case .wander:
             if random(0...1) < config.sitChance {
                 state = .sit
@@ -227,6 +275,17 @@ public final class BehaviorEngine {
     private func registerActivity(at now: TimeInterval) {
         lastActivityAt = now
         if state == .sleep { state = .idle }
+    }
+
+    /// Where she settles after an interruption: back to Claude duty if a
+    /// status is active, otherwise plain idle.
+    private func restingState() -> BuddyState {
+        switch claudeStatus {
+        case .thinking: .claudeThinking
+        case .working: .claudeWorking
+        case .waiting: .claudeWaiting
+        case nil: .idle
+        }
     }
 
     private func isWander(_ state: BuddyState) -> Bool {

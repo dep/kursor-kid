@@ -17,6 +17,12 @@ enum SpriteTextures {
     static let boop = textures(KikiSprites.boop)
     static let sleep = textures(KikiSprites.sleep)
 
+    static let claudeThinking = textures(KikiSprites.claudeThinking)
+    static let claudeWorking = textures(KikiSprites.claudeWorking)
+    static let claudeWaiting = textures(KikiSprites.claudeWaiting)
+    static let thoughtDots = texture(KikiSprites.thoughtDots)
+    static let exclaim = texture(KikiSprites.exclaim)
+
     /// A tiny pink heart used for boop particles.
     static let heart: SKTexture = {
         let grid = [

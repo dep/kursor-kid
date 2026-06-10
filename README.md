@@ -19,6 +19,34 @@ and says funny things powered by Claude Haiku.
   context (app switches, typing marathons, time of day). Works offline with
   built-in lines if you don't add an API key.
 
+## Claude Code integration 🤖
+
+Kiki reacts to Claude Code via its hooks and a `kursorkid://` URL scheme:
+
+| Claude Code event | Hook | Kiki |
+|---|---|---|
+| Prompt submitted | `UserPromptSubmit` | Ponders, eyes drifting, thought dots |
+| Running tools | `PreToolUse` | Heads-down on a tiny glowing laptop |
+| Needs your input | `Notification` | Arms crossed, foot tapping, pink "!" |
+| Finished | `Stop` | Celebration jump + hearts + "come look!" |
+| Session ends | `SessionEnd` | Back to normal life |
+
+Hook commands look like this (guarded so they're no-ops when she's not running,
+`async` so they never slow Claude down):
+
+```json
+{
+  "type": "command",
+  "command": "pgrep -xq KursorKid && open -g 'kursorkid://claude/working' || true",
+  "async": true,
+  "timeout": 5
+}
+```
+
+Add one per event in `~/.claude/settings.json` with the path suffix
+`thinking` / `working` / `waiting` / `done` / `clear`. A stale status clears
+itself after 3 minutes, and she's still boopable while on duty.
+
 ## Setup
 
 1. Launch the app — Kiki appears bottom-left, and a 👾 icon joins your menu bar.

@@ -47,6 +47,39 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         scheduleSelfShotIfRequested(view: skView)
     }
 
+    // MARK: - kursorkid:// URL scheme (Claude Code hooks)
+
+    func application(_ application: NSApplication, open urls: [URL]) {
+        for url in urls { handle(url) }
+    }
+
+    /// `kursorkid://claude/<thinking|working|waiting|done|clear>`
+    private func handle(_ url: URL) {
+        guard url.scheme == "kursorkid", url.host == "claude" else { return }
+        let now = CACurrentMediaTime()
+        switch url.lastPathComponent {
+        case "thinking":
+            scene.engine.handle(.claudeStatus(.thinking, now: now))
+        case "working":
+            scene.engine.handle(.claudeStatus(.working, now: now))
+        case "waiting":
+            let wasWaiting = scene.engine.claudeStatus == .waiting
+            scene.engine.handle(.claudeStatus(.waiting, now: now))
+            if !wasWaiting { quips.claudeWaiting() }
+        case "done":
+            let wasActive = scene.engine.claudeStatus != nil
+            scene.engine.handle(.claudeStatus(nil, now: now))
+            if wasActive {
+                scene.celebrate()
+                quips.claudeDone()
+            }
+        case "clear":
+            scene.engine.handle(.claudeStatus(nil, now: now))
+        default:
+            break
+        }
+    }
+
     /// Dev utility: `--self-shot <path>` renders the scene to a PNG after a
     /// short warmup so behavior can be verified without screen recording
     /// permission. `--demo-bubble` shows a canned line first.

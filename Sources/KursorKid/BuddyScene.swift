@@ -14,6 +14,7 @@ final class BuddyScene: SKScene {
     var onStateChange: ((BuddyState, BuddyState, TimeInterval) -> Void)?
 
     private let sprite = SKSpriteNode(texture: SpriteTextures.idle[.center]?.first)
+    private let badge = SKSpriteNode()
     private var eyeDirection: KikiSprites.EyeDirection = .center
     private let bubble = SpeechBubble()
     private var lastAppliedState: BuddyState?
@@ -44,6 +45,50 @@ final class BuddyScene: SKScene {
         sprite.texture?.filteringMode = .nearest
         addChild(sprite)
         addChild(bubble)
+        badge.isHidden = true
+        addChild(badge)
+    }
+
+    private func isClaudeState(_ state: BuddyState) -> Bool {
+        state == .claudeThinking || state == .claudeWorking || state == .claudeWaiting
+    }
+
+    private func showBadge(_ texture: SKTexture, pulse: Bool) {
+        badge.texture = texture
+        badge.size = texture.size()
+        badge.setScale(3)
+        badge.isHidden = false
+        badge.removeAllActions()
+        if pulse {
+            badge.run(.repeatForever(.sequence([
+                .fadeAlpha(to: 0.25, duration: 0.7),
+                .fadeAlpha(to: 1.0, duration: 0.7),
+            ])))
+        } else {
+            badge.alpha = 1
+            badge.run(.repeatForever(.sequence([
+                .moveBy(x: 0, y: 8, duration: 0.25),
+                .moveBy(x: 0, y: -8, duration: 0.35),
+                .wait(forDuration: 0.6),
+            ])))
+        }
+    }
+
+    private func hideBadge() {
+        badge.isHidden = true
+        badge.removeAllActions()
+    }
+
+    /// Claude finished: a happy jump with extra hearts.
+    func celebrate() {
+        guard !isDragging else { return }
+        spawnHearts()
+        sprite.run(.sequence([
+            .moveBy(x: 0, y: 30, duration: 0.15),
+            .moveBy(x: 0, y: -30, duration: 0.2),
+            .moveBy(x: 0, y: 18, duration: 0.12),
+            .moveBy(x: 0, y: -18, duration: 0.16),
+        ]), withKey: "celebrate")
     }
 
     func setSpriteScale(_ scale: Int) {
@@ -65,6 +110,7 @@ final class BuddyScene: SKScene {
         updateEyeDirection(cursorX: cursor.x, spriteX: spriteCenter.x)
         updateClickThrough(cursor: cursor)
         bubble.position = CGPoint(x: sprite.position.x, y: sprite.position.y + spriteHeight + 4)
+        badge.position = CGPoint(x: sprite.position.x + spriteHeight * 0.45, y: sprite.position.y + spriteHeight + 14)
 
         if isDragging {
             let local = convertFromScreen(cursor)
@@ -128,7 +174,17 @@ final class BuddyScene: SKScene {
             loop(SpriteTextures.sleep, timePerFrame: 0.9)
         case .dragged:
             sprite.texture = SpriteTextures.startled[0]
+        case .claudeThinking:
+            loop(SpriteTextures.claudeThinking, timePerFrame: 0.9)
+            showBadge(SpriteTextures.thoughtDots, pulse: true)
+        case .claudeWorking:
+            loop(SpriteTextures.claudeWorking, timePerFrame: 0.3)
+        case .claudeWaiting:
+            loop(SpriteTextures.claudeWaiting, timePerFrame: 0.45)
+            showBadge(SpriteTextures.exclaim, pulse: false)
         }
+
+        if !isClaudeState(state) { hideBadge() }
 
         // Landing after a drag: drop her back to the ground.
         if previous == .dragged, state != .dragged, sprite.position.y > groundY {

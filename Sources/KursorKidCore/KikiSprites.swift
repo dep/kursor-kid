@@ -83,6 +83,26 @@ public enum KikiSprites {
         ".....P..JJJJJJJJ..P",
     ]
 
+    // Arms crossed (impatient waiting pose).
+    static let torsoArmsCrossed = [
+        "....hh.JJJJJJJJJJ.hh",
+        "....hh.JPPJJJJPPJ.hh",
+        "....hh.JSSSSSSSSJ.hh",
+        "....hh.JJJJJJJJJJ.hh",
+        ".....P..JJJJJJJJ..P",
+    ]
+
+    // Foot-tap variant of standing legs: right heel raised.
+    static let legsTap = [
+        "........pppppppp",
+        "........pppppppp",
+        "........ppp..ppp",
+        "........ppp..ppp",
+        "........ppp..PPPP",
+        ".......PPPP..PCCP",
+        ".......PCCP",
+    ]
+
     // Arm raised on the right side connecting up toward the waving hand.
     static let torsoWaveArm = [
         "....hh.JJJJJJJJJJ.hhS",
@@ -236,10 +256,43 @@ public enum KikiSprites {
         sitting(eyes: eyesClosed, mouth: mouthOpen),
     ]
 
+    // MARK: - Claude Code activity poses
+
+    /// Pondering: hand near her face, gaze drifting side to side.
+    public static let claudeThinking: [[String]] = [
+        standing(eyes: eyeRows(.left), mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand, handRow: 4),
+        standing(eyes: eyeRows(.right), mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand, handRow: 4),
+    ]
+
+    /// Heads-down on a tiny laptop (we see the glowing lid from behind).
+    public static let claudeWorking: [[String]] = [
+        workingFrame(lid: "......OCCCCCCCCCCCCO"),
+        workingFrame(lid: "......OCCWCCCCCCWCCO"),
+    ]
+
+    private static func workingFrame(lid: String) -> [String] {
+        var frame = sitting(eyes: eyeRows(.center), mouth: mouthSmile)
+        frame[18] = lid
+        return frame
+    }
+
+    /// Arms crossed, foot tapping. Where ARE you?
+    public static let claudeWaiting: [[String]] = [
+        standing(eyes: eyeRows(.center), mouth: mouthSmile, torso: torsoArmsCrossed, legs: legsStand),
+        standing(eyes: eyeRows(.left), mouth: mouthSmile, torso: torsoArmsCrossed, legs: legsTap),
+    ]
+
+    /// Badge sprites shown above her head during Claude activity.
+    public static let thoughtDots = ["WW..WW..WW", "WW..WW..WW"]
+    public static let exclaim = ["PP", "PP", "PP", "PP", "..", "PP"]
+
     public static let allAnimations: [String: [[String]]] = {
         var animations: [String: [[String]]] = [
             "walk": walk, "dance": dance, "startled": startled,
             "boop": boop, "sleep": sleep,
+            "claude-thinking": claudeThinking,
+            "claude-working": claudeWorking,
+            "claude-waiting": claudeWaiting,
         ]
         for direction in EyeDirection.allCases {
             animations["idle-\(direction)"] = idleFrames(direction)

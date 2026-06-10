@@ -13,10 +13,28 @@ final class QuipCoordinator {
     private var lastClickQuipAt: Date = .distantPast
     private var lastAppSwitchQuipAt: Date = .distantPast
     private var lastTimeOfDayQuipDay: Int = -1
+    private var lastClaudeLineAt: Date = .distantPast
     private var idleTimer: Timer?
 
     private let clickCooldown: TimeInterval = 10
     private let appSwitchCooldown: TimeInterval = 600
+    private let claudeLineCooldown: TimeInterval = 45
+
+    /// Local lines for Claude Code events — instant, never hit the API.
+    private let claudeDoneLines = [
+        "done!! come look 👀",
+        "claude's finished. inspect the goods.",
+        "ding! fresh code, hot out the oven.",
+        "all done. i supervised, you're welcome.",
+        "finished! i watched the whole time.",
+    ]
+    private let claudeWaitingLines = [
+        "hey. HEY. claude needs you.",
+        "claude's waiting on you, choom.",
+        "input required!! this is not a drill.",
+        "claude said knock knock. answer it.",
+        "psst — terminal wants your attention.",
+    ]
 
     init(service: QuipService, settings: SettingsStore, inputMonitor: InputMonitor, scene: BuddyScene) {
         self.service = service
@@ -70,6 +88,21 @@ final class QuipCoordinator {
                 self.scheduleIdleChatter()
             }
         }
+    }
+
+    func claudeDone() {
+        showClaudeLine(claudeDoneLines.randomElement()!)
+    }
+
+    func claudeWaiting() {
+        showClaudeLine(claudeWaitingLines.randomElement()!)
+    }
+
+    private func showClaudeLine(_ line: String) {
+        guard !settings.muted else { return }
+        guard Date().timeIntervalSince(lastClaudeLineAt) >= claudeLineCooldown else { return }
+        lastClaudeLineAt = Date()
+        scene?.showBubble(line)
     }
 
     // MARK: - Delivery

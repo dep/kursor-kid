@@ -38,6 +38,13 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key><string>$BUNDLE_ID.claude</string>
+            <key>CFBundleURLSchemes</key><array><string>kursorkid</string></array>
+        </dict>
+    </array>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSHumanReadableCopyright</key><string>© 2026 Danny Peck</string>
 </dict>

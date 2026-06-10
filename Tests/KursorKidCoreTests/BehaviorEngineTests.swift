@@ -180,3 +180,66 @@ final class BehaviorEngineTests: XCTestCase {
         XCTAssertEqual(engine.state, .idle)
     }
 }
+
+// MARK: - Claude Code status
+
+extension BehaviorEngineTests {
+    private func freshEngine() -> BehaviorEngine {
+        BehaviorEngine(random: { $0.upperBound })
+    }
+
+    func testClaudeStatusPinsState() {
+        let engine = freshEngine()
+        engine.handle(.tick(now: 0, cursorDistance: 1000, cursorX: 2000))
+        engine.handle(.claudeStatus(.working, now: 1))
+        XCTAssertEqual(engine.state, .claudeWorking)
+        // Ticks don't wander/sleep/chase away from claude states.
+        engine.handle(.tick(now: 30, cursorDistance: 1000, cursorX: 2000))
+        XCTAssertEqual(engine.state, .claudeWorking)
+    }
+
+    func testClaudeStatusSuppressesTypingDance() {
+        let engine = freshEngine()
+        engine.handle(.claudeStatus(.thinking, now: 0))
+        var t: TimeInterval = 0
+        while t <= 4 {
+            engine.handle(.keystroke(now: t))
+            t += 0.2
+        }
+        XCTAssertEqual(engine.state, .claudeThinking)
+    }
+
+    func testBoopReturnsToClaudeState() {
+        let engine = freshEngine()
+        engine.handle(.claudeStatus(.waiting, now: 0))
+        engine.handle(.clicked(now: 1))
+        XCTAssertEqual(engine.state, .boop)
+        engine.handle(.animationFinished(now: 2))
+        XCTAssertEqual(engine.state, .claudeWaiting)
+    }
+
+    func testClearReturnsToIdle() {
+        let engine = freshEngine()
+        engine.handle(.claudeStatus(.working, now: 0))
+        engine.handle(.claudeStatus(nil, now: 5))
+        XCTAssertEqual(engine.state, .idle)
+    }
+
+    func testStaleClaudeStatusTimesOut() {
+        let engine = freshEngine()
+        engine.handle(.claudeStatus(.working, now: 0))
+        engine.handle(.tick(now: 200, cursorDistance: 1000, cursorX: 2000))
+        XCTAssertEqual(engine.state, .idle)
+        XCTAssertNil(engine.claudeStatus)
+    }
+
+    func testStatusTransitions() {
+        let engine = freshEngine()
+        engine.handle(.claudeStatus(.thinking, now: 0))
+        XCTAssertEqual(engine.state, .claudeThinking)
+        engine.handle(.claudeStatus(.working, now: 1))
+        XCTAssertEqual(engine.state, .claudeWorking)
+        engine.handle(.claudeStatus(.waiting, now: 2))
+        XCTAssertEqual(engine.state, .claudeWaiting)
+    }
+}
