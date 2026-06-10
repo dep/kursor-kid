@@ -175,7 +175,7 @@ final class BuddyScene: SKScene {
         case .dragged:
             sprite.texture = SpriteTextures.startled[0]
         case .claudeThinking:
-            loop(SpriteTextures.claudeThinking, timePerFrame: 0.9)
+            loop(SpriteTextures.claudeThinking, timePerFrame: 0.3)
             showBadge(SpriteTextures.thoughtDots, pulse: true)
         case .claudeWorking:
             loop(SpriteTextures.claudeWorking, timePerFrame: 0.3)

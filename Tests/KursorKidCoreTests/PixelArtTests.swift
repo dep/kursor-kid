@@ -37,4 +37,9 @@ final class PixelArtTests: XCTestCase {
             }
         }
     }
+
+    func testClaudeThinkingFramesAreDistinct() {
+        let frames = KikiSprites.claudeThinking.map { $0.joined(separator: "\n") }
+        XCTAssertEqual(Set(frames).count, frames.count, "duplicate frames make the animation look frozen")
+    }
 }

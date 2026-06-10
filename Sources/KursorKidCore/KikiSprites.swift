@@ -258,10 +258,20 @@ public enum KikiSprites {
 
     // MARK: - Claude Code activity poses
 
-    /// Pondering: hand near her face, gaze drifting side to side.
+    /// VR visor "eyes": a glowing cyan band with a white glint that sweeps
+    /// across frame to frame, like data streaming past.
+    static func visorRows(glint: Int) -> (top: String, bottom: String) {
+        var top = Array("OCCCCCCCCO")
+        top[glint] = "W"
+        return (String(top), "OCCCCCCCCO")
+    }
+
+    /// Jacked in: VR headset on, hands grabbing at holograms.
     public static let claudeThinking: [[String]] = [
-        standing(eyes: eyeRows(.left), mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand, handRow: 4),
-        standing(eyes: eyeRows(.right), mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand, handRow: 4),
+        standing(eyes: visorRows(glint: 2), mouth: mouthSmile, torso: torsoArmsUp, legs: legsStand),
+        standing(eyes: visorRows(glint: 4), mouth: mouthOpen, torso: torsoWaveArm, legs: legsStand, handRow: 1),
+        standing(eyes: visorRows(glint: 6), mouth: mouthSmile, torso: torsoArmsUp, legs: legsSpread),
+        standing(eyes: visorRows(glint: 7), mouth: mouthOpen, torso: torsoWaveArm, legs: legsStand, handRow: 3),
     ]
 
     /// Heads-down on a tiny laptop (we see the glowing lid from behind).
