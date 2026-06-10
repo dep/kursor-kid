@@ -53,8 +53,12 @@ final class SpeechBubble: SKNode {
         var offsetX: CGFloat = 0
         if buddyX - halfWidth < 8 { offsetX = halfWidth - buddyX + 8 }
         if buddyX + halfWidth > screenWidth - 8 { offsetX = (screenWidth - 8) - buddyX - halfWidth }
-        background.position.x = offsetX
-        label.position.x = offsetX
+        // Shift content up so the node's origin is the TAIL TIP — the bubble
+        // then grows upward and never covers Kiki, however many lines it has.
+        let offsetY = 8 - rect.minY
+        background.position = CGPoint(x: offsetX, y: offsetY)
+        label.position = CGPoint(x: offsetX, y: offsetY)
+        tail.position.y = offsetY
 
         bubble.alpha = 0
         bubble.setScale(0.6)

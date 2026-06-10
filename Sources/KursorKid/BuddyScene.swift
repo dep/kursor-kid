@@ -64,7 +64,7 @@ final class BuddyScene: SKScene {
         syncState(now: currentTime)
         updateEyeDirection(cursorX: cursor.x, spriteX: spriteCenter.x)
         updateClickThrough(cursor: cursor)
-        bubble.position = CGPoint(x: sprite.position.x, y: sprite.position.y + spriteHeight + 26)
+        bubble.position = CGPoint(x: sprite.position.x, y: sprite.position.y + spriteHeight + 4)
 
         if isDragging {
             let local = convertFromScreen(cursor)
