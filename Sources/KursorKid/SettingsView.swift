@@ -82,6 +82,7 @@ struct SettingsView: View {
 
             Section("Behavior") {
                 Picker("Kiki's size", selection: $scale) {
+                    Text("Tiny (2×)").tag(2)
                     Text("Small (4×)").tag(4)
                     Text("Medium (5×)").tag(5)
                     Text("Large (6×)").tag(6)
