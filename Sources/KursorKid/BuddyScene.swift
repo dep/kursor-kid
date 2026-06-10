@@ -40,7 +40,7 @@ final class BuddyScene: SKScene {
     override func didMove(to view: SKView) {
         sprite.anchorPoint = CGPoint(x: 0.5, y: 0)
         sprite.setScale(spriteScale)
-        sprite.position = CGPoint(x: max(140, size.width * 0.2), y: groundY)
+        sprite.position = CGPoint(x: size.width * 0.75, y: groundY)
         sprite.texture?.filteringMode = .nearest
         addChild(sprite)
         addChild(bubble)
@@ -68,7 +68,7 @@ final class BuddyScene: SKScene {
 
         if isDragging {
             let local = convertFromScreen(cursor)
-            sprite.position.x = min(max(local.x, 20), size.width - 20)
+            sprite.position.x = min(max(local.x, walkableMinX), walkableMaxX)
             sprite.position.y = max(groundY, local.y - spriteHeight / 2)
         }
     }
@@ -91,12 +91,11 @@ final class BuddyScene: SKScene {
         case .idle:
             loop(SpriteTextures.idle[eyeDirection]!, timePerFrame: 0.6)
         case let .wander(targetX):
-            let margin: CGFloat = 60
-            let target = margin + targetX * (size.width - margin * 2)
+            let target = walkableMinX + targetX * (walkableMaxX - walkableMinX)
             walk(to: target, speed: walkSpeed, textures: SpriteTextures.walk, timePerFrame: 0.18, now: now)
         case .chaseCursor:
             let cursorX = NSEvent.mouseLocation.x - (view?.window?.frame.minX ?? 0)
-            let target = min(max(cursorX, 30), size.width - 30)
+            let target = min(max(cursorX, walkableMinX), walkableMaxX)
             walk(to: target, speed: chaseSpeed, textures: SpriteTextures.walk, timePerFrame: 0.09, now: now)
         case .dance:
             loop(SpriteTextures.dance, timePerFrame: 0.16)
@@ -262,6 +261,10 @@ final class BuddyScene: SKScene {
     }
 
     // MARK: - Geometry helpers
+
+    /// Kiki lives in the right half of the screen only.
+    private var walkableMinX: CGFloat { size.width * 0.5 + 16 }
+    private var walkableMaxX: CGFloat { size.width - 24 }
 
     private var spriteHeight: CGFloat { CGFloat(KikiSprites.height) * spriteScale }
 
