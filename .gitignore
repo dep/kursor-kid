@@ -1,0 +1,19 @@
+
+# AI custom context (personal/team preferences, gitignored)
+.agents/USER_RULES.md
+.agents/TEAM_RULES.md
+.agents/LEARNING_LOG.md
+
+# Secrets
+.env
+
+# Build artifacts
+.build/
+dist/
+*.app
+
+# Brainstorm sessions
+.superpowers/
+
+# macOS
+.DS_Store
