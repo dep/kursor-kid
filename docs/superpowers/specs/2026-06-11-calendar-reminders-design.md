@@ -36,7 +36,7 @@ Follows the existing pure-core / AppKit-shell split (`BehaviorEngine` pattern).
 - Wraps `EKEventStore`.
 - `requestAccess()` — triggers the permission prompt; exposes current
   authorization status.
-- `calendars()` — list of (id, title, account source title, color) for the
+- `calendars()` — list of (id, title, account source title) for the
   Settings UI.
 - Polls every 30 seconds: fetch the next hour of non-all-day events from
   enabled calendars, feed the scheduler with `Date()`, and for each due
