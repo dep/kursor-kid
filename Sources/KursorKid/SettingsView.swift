@@ -142,8 +142,9 @@ struct SettingsView: View {
         }
         .onAppear { refreshCalendarAccess() }
         .formStyle(.grouped)
-        .frame(width: 420)
-        .fixedSize(horizontal: false, vertical: true)
+        // Fixed height with a scrolling form: content (e.g. a long calendar
+        // list) can exceed any screen, so sizing the window to fit it can't work.
+        .frame(width: 420, height: 600)
     }
 
     /// Checkbox per calendar, grouped by account source.
