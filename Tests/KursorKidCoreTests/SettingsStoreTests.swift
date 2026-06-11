@@ -64,4 +64,9 @@ final class SettingsStoreTests: XCTestCase {
         store.enabledCalendarIDs = nil
         XCTAssertNil(store.enabledCalendarIDs)
     }
+
+    func testEmptyEnabledCalendarIDsIsNotAll() {
+        store.enabledCalendarIDs = []
+        XCTAssertEqual(store.enabledCalendarIDs, [], "empty means no calendars, not all")
+    }
 }
