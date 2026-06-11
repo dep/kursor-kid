@@ -36,6 +36,14 @@ final class QuipCoordinator {
         "psst — terminal wants your attention.",
     ]
 
+    /// Reminder templates — `%@` is the event title. Local and instant.
+    private let calendarReminderLines = [
+        "⏰ '%@' in 2 min!! go go go",
+        "heads up — '%@' starts in 2 minutes 🏃‍♀️",
+        "psst. '%@'. two minutes. don't be late!",
+        "ding ding!! '%@' is about to start ⏰",
+    ]
+
     init(service: QuipService, settings: SettingsStore, inputMonitor: InputMonitor, scene: BuddyScene) {
         self.service = service
         self.settings = settings
@@ -96,6 +104,15 @@ final class QuipCoordinator {
 
     func claudeWaiting() {
         showClaudeLine(claudeWaitingLines.randomElement()!)
+    }
+
+    /// Calendar event starting in ~2 minutes. No cooldown: reminders are
+    /// time-critical and must never be dropped. Respects mute.
+    func calendarReminder(title: String) {
+        guard !settings.muted else { return }
+        let template = calendarReminderLines.randomElement()!
+        scene?.showBubble(String(format: template, title))
+        scene?.alertJump()
     }
 
     private func showClaudeLine(_ line: String) {
