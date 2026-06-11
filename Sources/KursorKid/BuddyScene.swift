@@ -91,6 +91,19 @@ final class BuddyScene: SKScene {
         ]), withKey: "celebrate")
     }
 
+    /// Calendar reminder: an urgent double hop with hearts to catch the eye.
+    /// Purely cosmetic — does not touch the behavior engine's state.
+    func alertJump() {
+        guard !isDragging else { return }
+        spawnHearts()
+        sprite.run(.sequence([
+            .moveBy(x: 0, y: 26, duration: 0.12),
+            .moveBy(x: 0, y: -26, duration: 0.16),
+            .moveBy(x: 0, y: 16, duration: 0.1),
+            .moveBy(x: 0, y: -16, duration: 0.14),
+        ]), withKey: "celebrate")
+    }
+
     func setSpriteScale(_ scale: Int) {
         spriteScale = CGFloat(scale)
         sprite.setScale(spriteScale)
