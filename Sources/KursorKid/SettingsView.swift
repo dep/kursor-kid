@@ -4,6 +4,7 @@ import SwiftUI
 
 struct SettingsView: View {
     let settings: SettingsStore
+    let calendarMonitor: CalendarMonitor
     var onScaleChange: (Int) -> Void
     var onChatterChange: () -> Void
 
@@ -16,13 +17,19 @@ struct SettingsView: View {
     @State private var muted: Bool
     @State private var scale: Int
     @State private var launchAtLogin = SMAppService.mainApp.status == .enabled
+    @State private var calendarReminders: Bool
+    @State private var calendars: [CalendarMonitor.CalendarInfo] = []
+    @State private var enabledIDs: Set<String>?
+    @State private var hasCalendarAccess = false
+    @State private var calendarAccessDenied = false
 
     enum KeyTestState: Equatable {
         case idle, testing, success, failure(String)
     }
 
-    init(settings: SettingsStore, onScaleChange: @escaping (Int) -> Void, onChatterChange: @escaping () -> Void) {
+    init(settings: SettingsStore, calendarMonitor: CalendarMonitor, onScaleChange: @escaping (Int) -> Void, onChatterChange: @escaping () -> Void) {
         self.settings = settings
+        self.calendarMonitor = calendarMonitor
         self.onScaleChange = onScaleChange
         self.onChatterChange = onChatterChange
         _clickQuips = State(initialValue: settings.clickQuipsEnabled)
@@ -31,6 +38,8 @@ struct SettingsView: View {
         _idleInterval = State(initialValue: Double(settings.idleIntervalMinutes))
         _muted = State(initialValue: settings.muted)
         _scale = State(initialValue: settings.spriteScale)
+        _calendarReminders = State(initialValue: settings.calendarRemindersEnabled)
+        _enabledIDs = State(initialValue: settings.enabledCalendarIDs)
     }
 
     var body: some View {
@@ -80,6 +89,32 @@ struct SettingsView: View {
                 }
             }
 
+            Section("Calendar") {
+                Toggle("Remind me 2 min before events", isOn: $calendarReminders)
+                    .onChange(of: calendarReminders) { _, v in
+                        settings.calendarRemindersEnabled = v
+                        if v { refreshCalendarAccess() }
+                    }
+                if calendarReminders {
+                    if hasCalendarAccess {
+                        calendarPicker
+                    } else if calendarAccessDenied {
+                        Label("Calendar access denied", systemImage: "xmark.circle.fill")
+                            .foregroundStyle(.red)
+                        Button("Open System Settings") {
+                            NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.settings.PrivacySecurity.extension?Privacy_Calendars")!)
+                        }
+                    } else {
+                        Button("Grant Calendar Access") {
+                            Task {
+                                _ = await calendarMonitor.requestAccess()
+                                refreshCalendarAccess()
+                            }
+                        }
+                    }
+                }
+            }
+
             Section("Behavior") {
                 Picker("Kiki's size", selection: $scale) {
                     Text("Tiny (2×)").tag(2)
@@ -105,9 +140,44 @@ struct SettingsView: View {
                     }
             }
         }
+        .onAppear { refreshCalendarAccess() }
         .formStyle(.grouped)
         .frame(width: 420)
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    /// Checkbox per calendar, grouped by account source.
+    private var calendarPicker: some View {
+        let grouped = Dictionary(grouping: calendars, by: \.source)
+        return ForEach(grouped.keys.sorted(), id: \.self) { source in
+            VStack(alignment: .leading, spacing: 4) {
+                Text(source).font(.caption).foregroundStyle(.secondary)
+                ForEach(grouped[source]!) { calendar in
+                    Toggle(calendar.title, isOn: calendarBinding(calendar.id))
+                }
+            }
+        }
+    }
+
+    private func calendarBinding(_ id: String) -> Binding<Bool> {
+        Binding(
+            get: { enabledIDs?.contains(id) ?? true },
+            set: { isOn in
+                // First curation materializes the "all calendars" nil sentinel.
+                var ids = enabledIDs ?? Set(calendars.map(\.id))
+                if isOn { ids.insert(id) } else { ids.remove(id) }
+                enabledIDs = ids
+                settings.enabledCalendarIDs = ids
+            }
+        )
+    }
+
+    private func refreshCalendarAccess() {
+        hasCalendarAccess = calendarMonitor.hasFullAccess
+        calendarAccessDenied = calendarMonitor.accessDenied
+        if hasCalendarAccess {
+            calendars = calendarMonitor.calendars()
+        }
     }
 
     private func testKey() {
@@ -154,11 +224,13 @@ struct SettingsView: View {
 final class SettingsWindowController {
     private var window: NSWindow?
     private let settings: SettingsStore
+    private let calendarMonitor: CalendarMonitor
     private let onScaleChange: (Int) -> Void
     private let onChatterChange: () -> Void
 
-    init(settings: SettingsStore, onScaleChange: @escaping (Int) -> Void, onChatterChange: @escaping () -> Void) {
+    init(settings: SettingsStore, calendarMonitor: CalendarMonitor, onScaleChange: @escaping (Int) -> Void, onChatterChange: @escaping () -> Void) {
         self.settings = settings
+        self.calendarMonitor = calendarMonitor
         self.onScaleChange = onScaleChange
         self.onChatterChange = onChatterChange
     }
@@ -167,6 +239,7 @@ final class SettingsWindowController {
         if window == nil {
             let view = SettingsView(
                 settings: settings,
+                calendarMonitor: calendarMonitor,
                 onScaleChange: onScaleChange,
                 onChatterChange: onChatterChange
             )

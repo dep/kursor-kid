@@ -10,6 +10,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var menuBar: MenuBarController!
     private var inputMonitor: InputMonitor!
     private var quips: QuipCoordinator!
+    private var calendarMonitor: CalendarMonitor!
     private var settingsWindow: SettingsWindowController?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
@@ -26,6 +27,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         inputMonitor = InputMonitor()
         let service = QuipService(apiKeyProvider: { KeychainStore.apiKey() })
         quips = QuipCoordinator(service: service, settings: settings, inputMonitor: inputMonitor, scene: scene)
+
+        calendarMonitor = CalendarMonitor(settings: settings)
+        calendarMonitor.onReminder = { [weak self] title in
+            self?.quips.calendarReminder(title: title)
+        }
+        calendarMonitor.start()
 
         wireCallbacks()
         inputMonitor.start()
@@ -149,6 +156,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         if settingsWindow == nil {
             settingsWindow = SettingsWindowController(
                 settings: settings,
+                calendarMonitor: calendarMonitor,
                 onScaleChange: { [weak self] scale in self?.scene.setSpriteScale(scale) },
                 onChatterChange: { [weak self] in self?.quips.scheduleIdleChatter() }
             )
