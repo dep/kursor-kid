@@ -72,7 +72,9 @@ final class CalendarMonitor {
             .filter { !$0.isAllDay }
             .map {
                 UpcomingEvent(
-                    id: $0.eventIdentifier ?? "\($0.title ?? "?")-\($0.startDate.timeIntervalSince1970)",
+                    // Recurring events share an eventIdentifier across
+                    // occurrences — key by occurrence start so each one fires.
+                    id: "\($0.eventIdentifier ?? $0.title ?? "?")-\($0.startDate.timeIntervalSince1970)",
                     title: $0.title ?? "untitled",
                     startDate: $0.startDate
                 )
