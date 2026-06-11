@@ -38,6 +38,7 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>LSMinimumSystemVersion</key><string>14.0</string>
     <key>LSUIElement</key><true/>
+    <key>NSCalendarsFullAccessUsageDescription</key><string>Kiki reads your upcoming events so she can remind you before they start.</string>
     <key>CFBundleURLTypes</key>
     <array>
         <dict>
@@ -64,7 +65,17 @@ done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/AppIcon.icns"
 
 echo "▸ Signing with hardened runtime"
-codesign --force --options runtime --timestamp --sign "$IDENTITY" "$APP"
+ENTITLEMENTS="/tmp/kursorkid-entitlements.plist"
+cat > "$ENTITLEMENTS" <<EPLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.security.personal-information.calendars</key><true/>
+</dict>
+</plist>
+EPLIST
+codesign --force --options runtime --timestamp --entitlements "$ENTITLEMENTS" --sign "$IDENTITY" "$APP"
 codesign --verify --strict "$APP"
 
 if [[ "${1:-}" != "--notarize" ]]; then
