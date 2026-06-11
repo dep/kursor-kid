@@ -46,4 +46,22 @@ final class SettingsStoreTests: XCTestCase {
         store.idleIntervalMinutes = 600
         XCTAssertEqual(store.idleIntervalMinutes, 60)
     }
+
+    func testCalendarDefaults() {
+        XCTAssertFalse(store.calendarRemindersEnabled)
+        XCTAssertNil(store.enabledCalendarIDs, "nil means all calendars")
+    }
+
+    func testCalendarRoundTrip() {
+        store.calendarRemindersEnabled = true
+        store.enabledCalendarIDs = ["work-id", "home-id"]
+        XCTAssertTrue(store.calendarRemindersEnabled)
+        XCTAssertEqual(store.enabledCalendarIDs, ["work-id", "home-id"])
+    }
+
+    func testEnabledCalendarIDsCanResetToAll() {
+        store.enabledCalendarIDs = ["work-id"]
+        store.enabledCalendarIDs = nil
+        XCTAssertNil(store.enabledCalendarIDs)
+    }
 }

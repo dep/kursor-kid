@@ -13,6 +13,8 @@ public final class SettingsStore {
         static let muted = "muted"
         static let spriteScale = "spriteScale"
         static let buddyVisible = "buddyVisible"
+        static let calendarReminders = "calendarRemindersEnabled"
+        static let enabledCalendarIDs = "enabledCalendarIDs"
     }
 
     public init(defaults: UserDefaults = .standard) {
@@ -57,6 +59,24 @@ public final class SettingsStore {
     public var buddyVisible: Bool {
         get { bool(Key.buddyVisible, default: true) }
         set { defaults.set(newValue, forKey: Key.buddyVisible) }
+    }
+
+    public var calendarRemindersEnabled: Bool {
+        get { bool(Key.calendarReminders, default: false) }
+        set { defaults.set(newValue, forKey: Key.calendarReminders) }
+    }
+
+    /// Calendar IDs enabled for event reminders. `nil` means all calendars,
+    /// so newly added calendars are included until the user curates the list.
+    public var enabledCalendarIDs: Set<String>? {
+        get { (defaults.array(forKey: Key.enabledCalendarIDs) as? [String]).map(Set.init) }
+        set {
+            if let newValue {
+                defaults.set(Array(newValue).sorted(), forKey: Key.enabledCalendarIDs)
+            } else {
+                defaults.removeObject(forKey: Key.enabledCalendarIDs)
+            }
+        }
     }
 
     private func bool(_ key: String, default defaultValue: Bool) -> Bool {
