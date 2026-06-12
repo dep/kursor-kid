@@ -54,7 +54,7 @@ public enum KikiSprites {
 
     static let eyesClosed = (top: "SSSSSSSSSS", bottom: "SOOOSSOOOS")
 
-    static let eyesDizzy = (top: "SOXOSSOXOS", bottom: "SOOOSSOOOS")
+    static let eyesDizzy = (top: "SOPOSSOSOS", bottom: "SOOOSSPOOS")
 
     static let mouthSmile = "SSOOSS"
     static let mouthOpen = "SOOOOS"
