@@ -27,6 +27,12 @@ final class BuddyScene: SKScene {
 
     private var isDragging = false
     private var mouseDownPoint: CGPoint?
+    private var isTossed = false
+    private let tossVelocityThreshold: CGFloat = 80   // pt/s
+    private let gravityAccel: CGFloat = 600            // pt/s²
+    private var tossVelocity: CGPoint = .zero
+    private var dragSamples: [(point: CGPoint, time: TimeInterval)] = []
+    private let dragSampleWindow: TimeInterval = 0.08  // 80ms
 
     private let walkSpeed: CGFloat = 50
     private let chaseSpeed: CGFloat = 150
@@ -348,13 +354,20 @@ final class BuddyScene: SKScene {
     override func mouseDragged(with event: NSEvent) {
         guard let start = mouseDownPoint else { return }
         let location = event.location(in: self)
+        let now = event.timestamp
         if !isDragging, hypot(location.x - start.x, location.y - start.y) > 6 {
             isDragging = true
+            dragSamples.removeAll()
             sprite.removeAction(forKey: "move")
             sprite.removeAction(forKey: "anim")
             sprite.removeAction(forKey: "bounce")
             engine.handle(.dragStarted)
             syncState(now: CACurrentMediaTime())
+        }
+        if isDragging {
+            dragSamples.append((point: location, time: now))
+            // Keep only samples within the rolling window.
+            dragSamples.removeAll { now - $0.time > dragSampleWindow }
         }
     }
 
@@ -362,18 +375,44 @@ final class BuddyScene: SKScene {
         defer { mouseDownPoint = nil }
         if isDragging {
             isDragging = false
-            engine.handle(.dragEnded(now: CACurrentMediaTime()))
-            syncState(now: CACurrentMediaTime())
+            let velocity = computeThrowVelocity(at: event.timestamp)
+            let speed = hypot(velocity.x, velocity.y)
+            if speed >= tossVelocityThreshold {
+                isTossed = true
+                tossVelocity = velocity
+                engine.handle(.tossed)
+                syncState(now: CACurrentMediaTime())
+                spawnSpeedLines(direction: velocity)
+            } else {
+                engine.handle(.dragEnded(now: CACurrentMediaTime()))
+                syncState(now: CACurrentMediaTime())
+            }
+            dragSamples.removeAll()
         } else if mouseDownPoint != nil {
             engine.handle(.clicked(now: CACurrentMediaTime()))
             syncState(now: CACurrentMediaTime())
-            // A click on a pending reminder acknowledges it instead of quipping.
             if bubble.isSticky {
                 bubble.dismiss()
             } else {
                 onBoop?()
             }
         }
+    }
+
+    private func computeThrowVelocity(at now: TimeInterval) -> CGPoint {
+        guard dragSamples.count >= 2 else { return .zero }
+        let recent = dragSamples.filter { now - $0.time <= dragSampleWindow }
+        guard let first = recent.first, let last = recent.last,
+              last.time > first.time else { return .zero }
+        let dt = last.time - first.time
+        return CGPoint(
+            x: (last.point.x - first.point.x) / dt,
+            y: (last.point.y - first.point.y) / dt
+        )
+    }
+
+    private func spawnSpeedLines(direction: CGPoint) {
+        // implemented in Task 6
     }
 
     // MARK: - Speech
