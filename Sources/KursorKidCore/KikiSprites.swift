@@ -251,9 +251,11 @@ public enum KikiSprites {
         standing(eyes: eyesClosed, mouth: mouthOpen, torso: torsoArmsDown, legs: legsStand),
     ]
 
+    /// Standing, eyes closed, breathing slowly. Used by all three drowsiness
+    /// stages — the scene tips the sprite over for deep sleep.
     public static let sleep: [[String]] = [
-        sitting(eyes: eyesClosed, mouth: mouthSmile),
-        sitting(eyes: eyesClosed, mouth: mouthOpen),
+        standing(eyes: eyesClosed, mouth: mouthSmile, torso: torsoArmsDown, legs: legsStand),
+        standing(eyes: eyesClosed, mouth: mouthOpen, torso: torsoArmsDown, legs: legsStand),
     ]
 
     // MARK: - Claude Code activity poses
@@ -295,6 +297,19 @@ public enum KikiSprites {
     /// Badge sprites shown above her head during Claude activity.
     public static let thoughtDots = ["WW..WW..WW", "WW..WW..WW"]
     public static let exclaim = ["PP", "PP", "PP", "PP", "..", "PP"]
+
+    /// Floating Z's for dozing/deep sleep: a big Z above a small z.
+    public static let zzz = [
+        ".....WWWWW",
+        "........W.",
+        ".......W..",
+        "......W...",
+        ".....WWWWW",
+        "WWW.......",
+        "..W.......",
+        ".W........",
+        "WWW.......",
+    ]
 
     public static let allAnimations: [String: [[String]]] = {
         var animations: [String: [[String]]] = [

@@ -42,4 +42,15 @@ final class PixelArtTests: XCTestCase {
         let frames = KikiSprites.claudeThinking.map { $0.joined(separator: "\n") }
         XCTAssertEqual(Set(frames).count, frames.count, "duplicate frames make the animation look frozen")
     }
+
+    func testSleepFramesAreStandingAndDistinct() {
+        let frames = KikiSprites.sleep.map { $0.joined(separator: "\n") }
+        XCTAssertEqual(Set(frames).count, frames.count, "breathing loop needs distinct frames")
+        // Standing pose: shoes reach row 22; the sitting pose ends in blank rows there.
+        XCTAssertTrue(KikiSprites.sleep[0][22].contains("P"), "expected standing shoes on row 22")
+    }
+
+    func testZzzBadgeRenders() {
+        XCTAssertNotNil(PixelArt.image(from: KikiSprites.zzz, palette: KikiSprites.palette))
+    }
 }
