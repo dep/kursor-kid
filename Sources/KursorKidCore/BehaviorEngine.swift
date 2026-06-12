@@ -16,6 +16,8 @@ public enum BuddyState: Equatable {
     case dozing
     case sleep
     case dragged
+    case tossed
+    case dizzy
     /// Claude Code activity states (driven by hook events via URL scheme).
     case claudeThinking
     case claudeWorking
@@ -36,6 +38,10 @@ public enum BuddyEvent: Equatable {
     case clicked(now: TimeInterval)
     case dragStarted
     case dragEnded(now: TimeInterval)
+    /// Kiki has been thrown (velocity above threshold). Scene drives physics.
+    case tossed
+    /// Kiki hit the floor after being tossed.
+    case landed(now: TimeInterval)
     /// The scene finished playing a one-shot animation or completed a walk.
     case animationFinished(now: TimeInterval)
     /// Something urgent (a calendar reminder) — wakes any drowsiness stage.
@@ -83,6 +89,7 @@ public final class BehaviorEngine {
     private var farSince: TimeInterval?
     private var nextWanderAt: TimeInterval?
     private var sitUntil: TimeInterval = 0
+    private var dizzyUntil: TimeInterval = 0
     public private(set) var claudeStatus: ClaudeStatus?
     private var claudeStatusAt: TimeInterval = 0
 
@@ -119,6 +126,11 @@ public final class BehaviorEngine {
                 nextWanderAt = now + TimeInterval(random(config.wanderInterval))
                 farSince = nil
             }
+        case .tossed:
+            state = .tossed
+        case let .landed(now):
+            dizzyUntil = now + 1.5
+            state = .dizzy
         case let .claudeStatus(status, now):
             handleClaudeStatus(status, now: now)
         }
@@ -145,6 +157,11 @@ public final class BehaviorEngine {
     // MARK: - Event handlers
 
     private func handleTick(now: TimeInterval, distance: CGFloat, cursorX: CGFloat) {
+        if state == .tossed { return }
+        if state == .dizzy {
+            if now >= dizzyUntil { state = .idle }
+            return
+        }
         lastCursorDistance = distance
         if lastActivityAt == nil { lastActivityAt = now }
         if nextWanderAt == nil { nextWanderAt = now + TimeInterval(random(config.wanderInterval)) }

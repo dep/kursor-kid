@@ -240,6 +240,10 @@ final class BuddyScene: SKScene {
             ]), withKey: "tipover")
         case .dragged:
             sprite.texture = SpriteTextures.startled[0]
+        case .tossed:
+            sprite.texture = SpriteTextures.startled[0]
+        case .dizzy:
+            sprite.texture = SpriteTextures.startled[0]
         case .claudeThinking:
             loop(SpriteTextures.claudeThinking, timePerFrame: 0.3)
             showBadge(SpriteTextures.thoughtDots, animation: .pulse)

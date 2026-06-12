@@ -293,6 +293,54 @@ final class BehaviorEngineTests: XCTestCase {
         engine.handle(.animationFinished(now: 12))
         XCTAssertEqual(engine.state, .idle)
     }
+
+    // MARK: Toss → dizzy → idle
+
+    func testLandedEventTransitionsTossedToDizzy() {
+        let engine = BehaviorEngine()
+        engine.handle(.dragStarted)
+        engine.handle(.tossed)
+        XCTAssertEqual(engine.state, .tossed)
+        engine.handle(.landed(now: 10))
+        XCTAssertEqual(engine.state, .dizzy)
+    }
+
+    func testDizzyAutoExpiresAfterDuration() {
+        let engine = BehaviorEngine()
+        engine.handle(.dragStarted)
+        engine.handle(.tossed)
+        engine.handle(.landed(now: 10))
+        XCTAssertEqual(engine.state, .dizzy)
+        // Dizzy lasts 1.5s; tick after that should return to idle.
+        engine.handle(.tick(now: 11.6, cursorDistance: 1000, cursorX: 2000))
+        XCTAssertEqual(engine.state, .idle)
+    }
+
+    func testDizzyDoesNotEndBeforeDuration() {
+        let engine = BehaviorEngine()
+        engine.handle(.dragStarted)
+        engine.handle(.tossed)
+        engine.handle(.landed(now: 10))
+        engine.handle(.tick(now: 11.0, cursorDistance: 1000, cursorX: 2000))
+        XCTAssertEqual(engine.state, .dizzy)
+    }
+
+    func testCanGrabKikiWhileDizzy() {
+        let engine = BehaviorEngine()
+        engine.handle(.dragStarted)
+        engine.handle(.tossed)
+        engine.handle(.landed(now: 10))
+        engine.handle(.dragStarted)
+        XCTAssertEqual(engine.state, .dragged)
+    }
+
+    func testTossedIgnoresTicks() {
+        let engine = BehaviorEngine()
+        engine.handle(.dragStarted)
+        engine.handle(.tossed)
+        engine.handle(.tick(now: 5, cursorDistance: 50, cursorX: 50)) // would startle from idle
+        XCTAssertEqual(engine.state, .tossed)
+    }
 }
 
 // MARK: - Claude Code status
