@@ -29,7 +29,7 @@ final class BuddyScene: SKScene {
     private var mouseDownPoint: CGPoint?
     private var isTossed = false
     private var lastUpdateTime: TimeInterval = 0
-    private let tossVelocityThreshold: CGFloat = 80   // pt/s
+    private let tossVelocityThreshold: CGFloat = 200  // pt/s
     private let gravityAccel: CGFloat = 600            // pt/s²
     private var tossVelocity: CGPoint = .zero
     private var dragSamples: [(point: CGPoint, time: TimeInterval)] = []
@@ -150,6 +150,23 @@ final class BuddyScene: SKScene {
             sprite.position.x += tossVelocity.x * dt
             sprite.position.y += tossVelocity.y * dt
 
+            // Bounce off left/right screen edges.
+            let halfW = spriteHeight * 0.5
+            if sprite.position.x < halfW {
+                sprite.position.x = halfW
+                tossVelocity.x = abs(tossVelocity.x) * 0.6
+            } else if sprite.position.x > size.width - halfW {
+                sprite.position.x = size.width - halfW
+                tossVelocity.x = -abs(tossVelocity.x) * 0.6
+            }
+
+            // Hard ceiling: clamp Y inside the visible strip.
+            let ceilingY = OverlayWindow.stripHeight - spriteHeight
+            if sprite.position.y > ceilingY {
+                sprite.position.y = ceilingY
+                tossVelocity.y = -abs(tossVelocity.y) * 0.6
+            }
+
             if sprite.position.y <= groundY {
                 sprite.position.y = groundY
                 isTossed = false
@@ -180,7 +197,8 @@ final class BuddyScene: SKScene {
         if isDragging {
             let local = convertFromScreen(cursor)
             sprite.position.x = min(max(local.x, walkableMinX), walkableMaxX)
-            sprite.position.y = max(groundY, local.y - spriteHeight / 2)
+            let ceilingY = OverlayWindow.stripHeight - spriteHeight
+            sprite.position.y = min(max(groundY, local.y - spriteHeight / 2), ceilingY)
         }
     }
 
