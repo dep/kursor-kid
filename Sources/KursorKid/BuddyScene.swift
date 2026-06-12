@@ -198,6 +198,7 @@ final class BuddyScene: SKScene {
         sprite.removeAction(forKey: "anim")
         sprite.removeAction(forKey: "bounce")
         sprite.removeAction(forKey: "tipover")
+        sprite.removeAction(forKey: "wobble")
         if previous == .sleep, state != .sleep {
             // She was lying down — pop upright before the new state animates.
             sprite.zRotation = 0
@@ -271,7 +272,13 @@ final class BuddyScene: SKScene {
             let spinDir: CGFloat = tossVelocity.x >= 0 ? -1 : 1
             sprite.run(.repeatForever(.rotate(byAngle: spinDir * .pi * 2, duration: 0.4)), withKey: "spin")
         case .dizzy:
-            sprite.texture = SpriteTextures.startled[0]
+            loop(SpriteTextures.dizzy, timePerFrame: 0.2)
+            showBadge(SpriteTextures.stars, animation: .pulse)
+            sprite.run(.repeatForever(.sequence([
+                .moveBy(x: 4, y: 0, duration: 0.1),
+                .moveBy(x: -8, y: 0, duration: 0.2),
+                .moveBy(x: 4, y: 0, duration: 0.1),
+            ])), withKey: "wobble")
         case .claudeThinking:
             loop(SpriteTextures.claudeThinking, timePerFrame: 0.3)
             showBadge(SpriteTextures.thoughtDots, animation: .pulse)
@@ -282,7 +289,7 @@ final class BuddyScene: SKScene {
             showBadge(SpriteTextures.exclaim, animation: .bob)
         }
 
-        if !isClaudeState(state), state != .dozing, state != .sleep { hideBadge() }
+        if !isClaudeState(state), state != .dozing, state != .sleep, state != .dizzy { hideBadge() }
 
         // Landing after a drag: drop her back to the ground.
         if previous == .dragged, state != .dragged, sprite.position.y > groundY {
