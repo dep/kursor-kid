@@ -67,7 +67,7 @@ final class QuipCoordinator {
     }
 
     func appSwitched(to name: String) {
-        guard settings.contextReactionsEnabled, !settings.muted else { return }
+        guard settings.contextReactionsEnabled, !settings.muted, !isDrowsing else { return }
         guard Date().timeIntervalSince(lastAppSwitchQuipAt) >= appSwitchCooldown else { return }
         lastAppSwitchQuipAt = Date()
         deliver(trigger: .appSwitch, appOverride: name)
