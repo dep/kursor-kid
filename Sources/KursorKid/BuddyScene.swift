@@ -146,7 +146,10 @@ final class BuddyScene: SKScene {
         updateEyeDirection(cursorX: cursor.x, spriteX: spriteCenter.x)
         updateClickThrough(cursor: cursor)
         bubble.position = CGPoint(x: sprite.position.x, y: sprite.position.y + spriteHeight + 4)
-        badgeAnchor.position = CGPoint(x: sprite.position.x + spriteHeight * 0.45, y: sprite.position.y + spriteHeight + 14)
+        // Anchor the badge just above the sprite's real bounds (the
+        // accumulated frame accounts for the lying-down rotation).
+        let spriteTop = sprite.calculateAccumulatedFrame().maxY
+        badgeAnchor.position = CGPoint(x: sprite.position.x + spriteHeight * 0.45, y: spriteTop + 14)
 
         if isDragging {
             let local = convertFromScreen(cursor)
@@ -224,11 +227,15 @@ final class BuddyScene: SKScene {
             // along the ground; raise her half a body-thickness so the lying
             // sprite isn't clipped below the window.
             let lyingY = groundY + CGFloat(KikiSprites.width) * spriteScale / 2
+            // Her body extends a full standing-height to the right of her
+            // feet once she's down — shift left if the wall is too close.
+            let sleepX = min(sprite.position.x, size.width - spriteHeight - 24)
             sprite.run(.sequence([
                 .wait(forDuration: 0.5),
                 .group([
                     .rotate(toAngle: -.pi / 2, duration: 0.35, shortestUnitArc: true),
                     .moveTo(y: lyingY, duration: 0.35),
+                    .moveTo(x: sleepX, duration: 0.35),
                 ]),
             ]), withKey: "tipover")
         case .dragged:
