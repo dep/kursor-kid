@@ -111,7 +111,7 @@ final class BuddyScene: SKScene {
 
     /// Claude finished: a happy jump with extra hearts.
     func celebrate() {
-        guard !isDragging else { return }
+        guard !isDragging, !isTossed else { return }
         spawnHearts()
         sprite.run(.sequence([
             .moveBy(x: 0, y: 30, duration: 0.15),
@@ -124,7 +124,7 @@ final class BuddyScene: SKScene {
     /// Calendar reminder: an urgent double hop with hearts to catch the eye.
     /// Purely cosmetic — does not touch the behavior engine's state.
     func alertJump() {
-        guard !isDragging else { return }
+        guard !isDragging, !isTossed else { return }
         spawnHearts()
         sprite.run(.sequence([
             .moveBy(x: 0, y: 26, duration: 0.12),
