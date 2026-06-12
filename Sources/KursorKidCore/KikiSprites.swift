@@ -54,6 +54,8 @@ public enum KikiSprites {
 
     static let eyesClosed = (top: "SSSSSSSSSS", bottom: "SOOOSSOOOS")
 
+    static let eyesDizzy = (top: "SOXOSSOXOS", bottom: "SOOOSSOOOS")
+
     static let mouthSmile = "SSOOSS"
     static let mouthOpen = "SOOOOS"
 
@@ -251,6 +253,12 @@ public enum KikiSprites {
         standing(eyes: eyesClosed, mouth: mouthOpen, torso: torsoArmsDown, legs: legsStand),
     ]
 
+    /// Dizzy after a hard landing: arms out, legs wobbly, X-eyes blink.
+    public static let dizzy: [[String]] = [
+        standing(eyes: eyesDizzy, mouth: mouthOpen, torso: torsoArmsUp, legs: legsSpread),
+        standing(eyes: eyesClosed, mouth: mouthOpen, torso: torsoArmsUp, legs: legsSpread),
+    ]
+
     /// Standing, eyes closed, breathing slowly. Used by all three drowsiness
     /// stages — the scene tips the sprite over for deep sleep.
     public static let sleep: [[String]] = [
@@ -311,10 +319,17 @@ public enum KikiSprites {
         "WWW.......",
     ]
 
+    /// Spinning stars badge shown while dizzy.
+    public static let stars = [
+        "W.W",
+        ".W.",
+        "W.W",
+    ]
+
     public static let allAnimations: [String: [[String]]] = {
         var animations: [String: [[String]]] = [
             "walk": walk, "dance": dance, "startled": startled,
-            "boop": boop, "sleep": sleep,
+            "boop": boop, "dizzy": dizzy, "sleep": sleep,
             "claude-thinking": claudeThinking,
             "claude-working": claudeWorking,
             "claude-waiting": claudeWaiting,
