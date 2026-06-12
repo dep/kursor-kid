@@ -310,14 +310,19 @@ final class BuddyScene: SKScene {
         } else if mouseDownPoint != nil {
             engine.handle(.clicked(now: CACurrentMediaTime()))
             syncState(now: CACurrentMediaTime())
-            onBoop?()
+            // A click on a pending reminder acknowledges it instead of quipping.
+            if bubble.isSticky {
+                bubble.dismiss()
+            } else {
+                onBoop?()
+            }
         }
     }
 
     // MARK: - Speech
 
-    func showBubble(_ text: String) {
-        bubble.show(text, screenWidth: size.width, buddyX: sprite.position.x)
+    func showBubble(_ text: String, sticky: Bool = false) {
+        bubble.show(text, screenWidth: size.width, buddyX: sprite.position.x, sticky: sticky)
         if engine.state == .idle {
             sprite.run(.sequence([
                 .repeat(.animate(with: SpriteTextures.talk[eyeDirection]!, timePerFrame: 0.22), count: 4),

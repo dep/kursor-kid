@@ -3,8 +3,13 @@ import SpriteKit
 /// Pixel-styled speech bubble that floats above Kiki's head.
 final class SpeechBubble: SKNode {
     private var currentBubble: SKNode?
+    /// A sticky bubble (calendar reminder) stays up until dismissed by a click
+    /// and can't be replaced by ordinary chatter.
+    private(set) var isSticky = false
 
-    func show(_ text: String, screenWidth: CGFloat, buddyX: CGFloat) {
+    func show(_ text: String, screenWidth: CGFloat, buddyX: CGFloat, sticky: Bool = false) {
+        if isSticky, !sticky, currentBubble?.parent != nil { return }
+        isSticky = sticky
         currentBubble?.removeAllActions()
         currentBubble?.removeFromParent()
 
@@ -65,11 +70,23 @@ final class SpeechBubble: SKNode {
         addChild(bubble)
         currentBubble = bubble
 
-        bubble.run(.sequence([
-            .group([.fadeIn(withDuration: 0.15), .scale(to: 1.0, duration: 0.15)]),
-            .wait(forDuration: 6.0),
-            .fadeOut(withDuration: 0.3),
-            .removeFromParent(),
-        ]))
+        if sticky {
+            bubble.run(.group([.fadeIn(withDuration: 0.15), .scale(to: 1.0, duration: 0.15)]))
+        } else {
+            bubble.run(.sequence([
+                .group([.fadeIn(withDuration: 0.15), .scale(to: 1.0, duration: 0.15)]),
+                .wait(forDuration: 6.0),
+                .fadeOut(withDuration: 0.3),
+                .removeFromParent(),
+            ]))
+        }
+    }
+
+    /// Dismisses the current bubble (how sticky reminders are acknowledged).
+    func dismiss() {
+        isSticky = false
+        guard let bubble = currentBubble else { return }
+        currentBubble = nil
+        bubble.run(.sequence([.fadeOut(withDuration: 0.2), .removeFromParent()]))
     }
 }

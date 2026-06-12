@@ -107,11 +107,12 @@ final class QuipCoordinator {
     }
 
     /// Calendar event starting in ~2 minutes. No cooldown: reminders are
-    /// time-critical and must never be dropped. Respects mute.
+    /// time-critical and must never be dropped. Respects mute. The bubble is
+    /// sticky — it stays up until the user clicks Kiki to acknowledge it.
     func calendarReminder(title: String) {
         guard !settings.muted else { return }
         let template = calendarReminderLines.randomElement()!
-        scene?.showBubble(String(format: template, title))
+        scene?.showBubble(String(format: template, title), sticky: true)
         scene?.alertJump()
     }
 
