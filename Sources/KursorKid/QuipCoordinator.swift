@@ -90,7 +90,7 @@ final class QuipCoordinator {
         idleTimer = Timer.scheduledTimer(withTimeInterval: jittered, repeats: false) { [weak self] _ in
             Task { @MainActor [weak self] in
                 guard let self else { return }
-                if self.settings.idleChatterEnabled, !self.settings.muted {
+                if self.settings.idleChatterEnabled, !self.settings.muted, !self.isDrowsing {
                     self.deliver(trigger: .idle)
                 }
                 self.scheduleIdleChatter()
@@ -111,9 +111,18 @@ final class QuipCoordinator {
     /// sticky — it stays up until the user clicks Kiki to acknowledge it.
     func calendarReminder(title: String) {
         guard !settings.muted else { return }
+        scene?.awaken() // meetings outrank naps — never hop while lying down
         let template = calendarReminderLines.randomElement()!
         scene?.showBubble(String(format: template, title), sticky: true)
         scene?.alertJump()
+    }
+
+    /// True while she's in any drowsiness stage — a sleepy girl doesn't quip.
+    private var isDrowsing: Bool {
+        switch scene?.engine.state {
+        case .drowsy, .dozing, .sleep: true
+        default: false
+        }
     }
 
     private func showClaudeLine(_ line: String) {
