@@ -14,6 +14,9 @@ final class BuddyScene: SKScene {
     var onStateChange: ((BuddyState, BuddyState, TimeInterval) -> Void)?
 
     private let sprite = SKSpriteNode(texture: SpriteTextures.idle[.center]?.first)
+    /// `badgeAnchor` is positioned every frame; `badge` animates within it so
+    /// movement actions aren't stomped by the per-frame repositioning.
+    private let badgeAnchor = SKNode()
     private let badge = SKSpriteNode()
     private var eyeDirection: KikiSprites.EyeDirection = .center
     private let bubble = SpeechBubble()
@@ -46,30 +49,48 @@ final class BuddyScene: SKScene {
         addChild(sprite)
         addChild(bubble)
         badge.isHidden = true
-        addChild(badge)
+        badgeAnchor.addChild(badge)
+        addChild(badgeAnchor)
     }
 
     private func isClaudeState(_ state: BuddyState) -> Bool {
         state == .claudeThinking || state == .claudeWorking || state == .claudeWaiting
     }
 
-    private func showBadge(_ texture: SKTexture, pulse: Bool) {
+    private enum BadgeAnimation {
+        case pulse  // fade in/out in place (thinking dots)
+        case bob    // small vertical hop (exclaim)
+        case drift  // rise and fade, looping (sleepy Z's)
+    }
+
+    private func showBadge(_ texture: SKTexture, animation: BadgeAnimation) {
         badge.texture = texture
         badge.size = texture.size()
         badge.setScale(3)
         badge.isHidden = false
         badge.removeAllActions()
-        if pulse {
+        badge.position = .zero
+        badge.alpha = 1
+        switch animation {
+        case .pulse:
             badge.run(.repeatForever(.sequence([
                 .fadeAlpha(to: 0.25, duration: 0.7),
                 .fadeAlpha(to: 1.0, duration: 0.7),
             ])))
-        } else {
-            badge.alpha = 1
+        case .bob:
             badge.run(.repeatForever(.sequence([
                 .moveBy(x: 0, y: 8, duration: 0.25),
                 .moveBy(x: 0, y: -8, duration: 0.35),
                 .wait(forDuration: 0.6),
+            ])))
+        case .drift:
+            badge.run(.repeatForever(.sequence([
+                .group([
+                    .moveBy(x: 0, y: 16, duration: 1.6),
+                    .sequence([.wait(forDuration: 0.8), .fadeAlpha(to: 0.0, duration: 0.8)]),
+                ]),
+                .moveBy(x: 0, y: -16, duration: 0),
+                .fadeAlpha(to: 1.0, duration: 0),
             ])))
         }
     }
@@ -77,6 +98,8 @@ final class BuddyScene: SKScene {
     private func hideBadge() {
         badge.isHidden = true
         badge.removeAllActions()
+        badge.position = .zero
+        badge.alpha = 1
     }
 
     /// Claude finished: a happy jump with extra hearts.
@@ -123,7 +146,7 @@ final class BuddyScene: SKScene {
         updateEyeDirection(cursorX: cursor.x, spriteX: spriteCenter.x)
         updateClickThrough(cursor: cursor)
         bubble.position = CGPoint(x: sprite.position.x, y: sprite.position.y + spriteHeight + 4)
-        badge.position = CGPoint(x: sprite.position.x + spriteHeight * 0.45, y: sprite.position.y + spriteHeight + 14)
+        badgeAnchor.position = CGPoint(x: sprite.position.x + spriteHeight * 0.45, y: sprite.position.y + spriteHeight + 14)
 
         if isDragging {
             let local = convertFromScreen(cursor)
@@ -145,6 +168,12 @@ final class BuddyScene: SKScene {
         sprite.removeAction(forKey: "move")
         sprite.removeAction(forKey: "anim")
         sprite.removeAction(forKey: "bounce")
+        sprite.removeAction(forKey: "tipover")
+        if previous == .sleep, state != .sleep {
+            // She was lying down — pop upright before the new state animates.
+            sprite.zRotation = 0
+            sprite.position.y = groundY
+        }
 
         switch state {
         case .idle:
@@ -184,26 +213,37 @@ final class BuddyScene: SKScene {
         case .sit:
             sprite.texture = SpriteTextures.sit[eyeDirection]![0]
         case .drowsy:
-            // Eyes closed, still standing — reuse sit texture until dedicated art exists.
-            sprite.texture = SpriteTextures.sit[eyeDirection]![0]
-        case .dozing:
-            // Eyes closed with Z's — reuse sleep loop until dedicated art exists.
             loop(SpriteTextures.sleep, timePerFrame: 0.9)
+        case .dozing:
+            loop(SpriteTextures.sleep, timePerFrame: 0.9)
+            showBadge(SpriteTextures.zzz, animation: .drift)
         case .sleep:
             loop(SpriteTextures.sleep, timePerFrame: 0.9)
+            showBadge(SpriteTextures.zzz, animation: .drift)
+            // Tip over: rotating about the bottom-center anchor lays the body
+            // along the ground; raise her half a body-thickness so the lying
+            // sprite isn't clipped below the window.
+            let lyingY = groundY + CGFloat(KikiSprites.width) * spriteScale / 2
+            sprite.run(.sequence([
+                .wait(forDuration: 0.5),
+                .group([
+                    .rotate(toAngle: -.pi / 2, duration: 0.35, shortestUnitArc: true),
+                    .moveTo(y: lyingY, duration: 0.35),
+                ]),
+            ]), withKey: "tipover")
         case .dragged:
             sprite.texture = SpriteTextures.startled[0]
         case .claudeThinking:
             loop(SpriteTextures.claudeThinking, timePerFrame: 0.3)
-            showBadge(SpriteTextures.thoughtDots, pulse: true)
+            showBadge(SpriteTextures.thoughtDots, animation: .pulse)
         case .claudeWorking:
             loop(SpriteTextures.claudeWorking, timePerFrame: 0.3)
         case .claudeWaiting:
             loop(SpriteTextures.claudeWaiting, timePerFrame: 0.45)
-            showBadge(SpriteTextures.exclaim, pulse: false)
+            showBadge(SpriteTextures.exclaim, animation: .bob)
         }
 
-        if !isClaudeState(state) { hideBadge() }
+        if !isClaudeState(state), state != .dozing, state != .sleep { hideBadge() }
 
         // Landing after a drag: drop her back to the ground.
         if previous == .dragged, state != .dragged, sprite.position.y > groundY {
@@ -327,6 +367,11 @@ final class BuddyScene: SKScene {
 
     // MARK: - Speech
 
+    /// Wake her for something urgent (a calendar reminder).
+    func awaken() {
+        engine.handle(.awaken(now: CACurrentMediaTime()))
+    }
+
     func showBubble(_ text: String, sticky: Bool = false) {
         bubble.show(text, screenWidth: size.width, buddyX: sprite.position.x, sticky: sticky)
         if engine.state == .idle {
@@ -349,12 +394,9 @@ final class BuddyScene: SKScene {
     private var spriteHeight: CGFloat { CGFloat(KikiSprites.height) * spriteScale }
 
     private func spriteFrame() -> CGRect {
-        CGRect(
-            x: sprite.position.x - CGFloat(KikiSprites.width) * spriteScale / 2,
-            y: sprite.position.y,
-            width: CGFloat(KikiSprites.width) * spriteScale,
-            height: spriteHeight
-        )
+        // Accumulated frame accounts for the tip-over rotation, so a lying
+        // Kiki is clickable along her whole body.
+        sprite.calculateAccumulatedFrame()
     }
 
     private func spriteCenterInScreen() -> CGPoint {
