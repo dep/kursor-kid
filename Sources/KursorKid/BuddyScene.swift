@@ -28,6 +28,7 @@ final class BuddyScene: SKScene {
     private var isDragging = false
     private var mouseDownPoint: CGPoint?
     private var isTossed = false
+    private var lastUpdateTime: TimeInterval = 0
     private let tossVelocityThreshold: CGFloat = 80   // pt/s
     private let gravityAccel: CGFloat = 600            // pt/s²
     private var tossVelocity: CGPoint = .zero
@@ -141,6 +142,25 @@ final class BuddyScene: SKScene {
     // MARK: - Render loop
 
     override func update(_ currentTime: TimeInterval) {
+        let dt = lastUpdateTime > 0 ? min(currentTime - lastUpdateTime, 0.05) : 0
+        lastUpdateTime = currentTime
+
+        if isTossed {
+            tossVelocity.y -= gravityAccel * dt
+            sprite.position.x += tossVelocity.x * dt
+            sprite.position.y += tossVelocity.y * dt
+
+            if sprite.position.y <= groundY {
+                sprite.position.y = groundY
+                isTossed = false
+                engine.handle(.landed(now: currentTime))
+                syncState(now: currentTime)
+                land()
+            }
+            // Skip normal engine tick while airborne.
+            return
+        }
+
         let cursor = NSEvent.mouseLocation
         let spriteCenter = spriteCenterInScreen()
         let distance = hypot(cursor.x - spriteCenter.x, cursor.y - spriteCenter.y)
@@ -409,6 +429,15 @@ final class BuddyScene: SKScene {
             x: (last.point.x - first.point.x) / dt,
             y: (last.point.y - first.point.y) / dt
         )
+    }
+
+    private func land() {
+        sprite.zRotation = 0
+        sprite.removeAction(forKey: "spin")
+        sprite.run(.sequence([
+            .scaleY(to: spriteScale * 0.7, duration: 0.08),
+            .scaleY(to: spriteScale, duration: 0.18),
+        ]), withKey: "move")
     }
 
     private func spawnSpeedLines(direction: CGPoint) {
