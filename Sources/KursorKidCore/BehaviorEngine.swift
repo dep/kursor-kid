@@ -10,6 +10,10 @@ public enum BuddyState: Equatable {
     case startled
     case boop
     case sit
+    /// Eyes closed, still standing (30s idle). Fighting it.
+    case drowsy
+    /// Eyes closed with Z's floating (60s idle).
+    case dozing
     case sleep
     case dragged
     /// Claude Code activity states (driven by hook events via URL scheme).
@@ -34,6 +38,8 @@ public enum BuddyEvent: Equatable {
     case dragEnded(now: TimeInterval)
     /// The scene finished playing a one-shot animation or completed a walk.
     case animationFinished(now: TimeInterval)
+    /// Something urgent (a calendar reminder) — wakes any drowsiness stage.
+    case awaken(now: TimeInterval)
     /// Claude Code hook event. `nil` clears (done / session end).
     case claudeStatus(ClaudeStatus?, now: TimeInterval)
 }
@@ -50,7 +56,9 @@ public final class BehaviorEngine {
         public var danceLinger: TimeInterval = 3
         public var chaseDistance: CGFloat = 300
         public var chaseAfter: TimeInterval = 10
-        public var sleepAfter: TimeInterval = 300
+        public var drowsyAfter: TimeInterval = 30
+        public var dozeAfter: TimeInterval = 60
+        public var sleepAfter: TimeInterval = 90
         public var wanderInterval: ClosedRange<CGFloat> = 5...20
         public var sitChance: CGFloat = 0.3
         public var sitDuration: TimeInterval = 10
@@ -104,6 +112,13 @@ public final class BehaviorEngine {
             nextWanderAt = now + TimeInterval(random(config.wanderInterval))
         case let .animationFinished(now):
             handleAnimationFinished(now: now)
+        case let .awaken(now):
+            registerActivity(at: now)
+            if state == .sleep {
+                state = .idle
+                nextWanderAt = now + TimeInterval(random(config.wanderInterval))
+                farSince = nil
+            }
         case let .claudeStatus(status, now):
             handleClaudeStatus(status, now: now)
         }
@@ -195,14 +210,21 @@ public final class BehaviorEngine {
             state = .idle
         }
 
-        // Sleep after prolonged inactivity (only from calm states).
-        if state == .idle || state == .sit,
-           let lastActivity = lastActivityAt,
-           now - lastActivity >= config.sleepAfter {
-            state = .sleep
-            return
-        }
+        // Staged wind-down after inactivity, from calm states only. Deep
+        // sleep is sticky: ticks (and the cursor) never end it — only a
+        // keystroke, a boop, or an awaken does (see registerActivity).
         if state == .sleep { return }
+        if isCalm(state), let lastActivity = lastActivityAt {
+            let idleFor = now - lastActivity
+            if idleFor >= config.sleepAfter {
+                state = .sleep
+            } else if idleFor >= config.dozeAfter {
+                state = .dozing
+            } else if idleFor >= config.drowsyAfter {
+                state = .drowsy
+            }
+            if state == .drowsy || state == .dozing || state == .sleep { return }
+        }
 
         // Sit ends after its duration (one transition per tick).
         if state == .sit {
@@ -244,13 +266,22 @@ public final class BehaviorEngine {
             typingSustainedSince = nil
         }
 
-        if state == .sleep { state = .idle }
+        if state == .sleep {
+            state = .idle
+            // Reset timers so she doesn't immediately wander or chase after waking.
+            nextWanderAt = now + TimeInterval(random(config.wanderInterval))
+            farSince = nil
+        }
     }
 
     private func handleAnimationFinished(now: TimeInterval) {
         switch state {
         case .boop:
             state = restingState()
+            // Waking from boop (possibly from deep sleep): reset the wander
+            // timer so she doesn't immediately wander after the interaction.
+            nextWanderAt = now + TimeInterval(random(config.wanderInterval))
+            farSince = nil
         case .startled:
             if claudeStatus != nil {
                 state = restingState()
@@ -274,7 +305,14 @@ public final class BehaviorEngine {
 
     private func registerActivity(at now: TimeInterval) {
         lastActivityAt = now
-        if state == .sleep { state = .idle }
+        // Any activity rouses a drowsy/dozing Kiki. Deep sleep is NOT ended
+        // here — cursor movement also routes through this method, and the
+        // mouse must not wake her. Keystroke/boop/awaken wake explicitly.
+        if state == .drowsy || state == .dozing {
+            state = .idle
+            // Reset the wander timer so she doesn't immediately wander after waking.
+            nextWanderAt = now + TimeInterval(random(config.wanderInterval))
+        }
     }
 
     /// Where she settles after an interruption: back to Claude duty if a
@@ -286,6 +324,10 @@ public final class BehaviorEngine {
         case .waiting: .claudeWaiting
         case nil: .idle
         }
+    }
+
+    private func isCalm(_ state: BuddyState) -> Bool {
+        state == .idle || state == .sit || state == .drowsy || state == .dozing
     }
 
     private func isWander(_ state: BuddyState) -> Bool {

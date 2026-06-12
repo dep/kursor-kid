@@ -183,6 +183,12 @@ final class BuddyScene: SKScene {
             ]), withKey: "move")
         case .sit:
             sprite.texture = SpriteTextures.sit[eyeDirection]![0]
+        case .drowsy:
+            // Eyes closed, still standing — reuse sit texture until dedicated art exists.
+            sprite.texture = SpriteTextures.sit[eyeDirection]![0]
+        case .dozing:
+            // Eyes closed with Z's — reuse sleep loop until dedicated art exists.
+            loop(SpriteTextures.sleep, timePerFrame: 0.9)
         case .sleep:
             loop(SpriteTextures.sleep, timePerFrame: 0.9)
         case .dragged:

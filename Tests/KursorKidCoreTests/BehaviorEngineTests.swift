@@ -158,12 +158,117 @@ final class BehaviorEngineTests: XCTestCase {
     func testSitAfterWanderWhenRollIsLow() {
         let engine = makeEngine(sitRoll: 0.1)
         tick(engine, at: 0)
-        tick(engine, at: 21)
+        // Move the cursor at t=21 (when wander fires) to reset the activity
+        // clock; this keeps the wind-down timer well under 30s at t=33.
+        tick(engine, at: 21, cursorX: 2010)
         // sit-roll stub also makes wander targetX = 0.1; state is wander
         engine.handle(.animationFinished(now: 22))
         XCTAssertEqual(engine.state, .sit)
-        tick(engine, at: 33) // sit duration (10s) elapsed
+        tick(engine, at: 33) // sit duration (10s) elapsed, idleFor=12 < drowsyAfter
         XCTAssertEqual(engine.state, .idle)
+    }
+
+    // MARK: Staged drowsiness
+
+    /// Ticks an idle engine (cursor far, parked) once per second through
+    /// `range`, finishing any wander/chase walks so she returns to calm states.
+    private func idle(_ engine: BehaviorEngine, through range: ClosedRange<TimeInterval>) {
+        var t = range.lowerBound
+        while t <= range.upperBound {
+            tick(engine, at: t)
+            if case .wander = engine.state {
+                engine.handle(.animationFinished(now: t))
+            } else if engine.state == .chaseCursor {
+                engine.handle(.animationFinished(now: t))
+            }
+            t += 1
+        }
+    }
+
+    func testDrowsyAtThirtySeconds() {
+        let engine = makeEngine()
+        idle(engine, through: 0...31)
+        XCTAssertEqual(engine.state, .drowsy)
+    }
+
+    func testDozingAtSixtySeconds() {
+        let engine = makeEngine()
+        idle(engine, through: 0...61)
+        XCTAssertEqual(engine.state, .dozing)
+    }
+
+    func testDeepSleepAtNinetySeconds() {
+        let engine = makeEngine()
+        idle(engine, through: 0...91)
+        XCTAssertEqual(engine.state, .sleep)
+    }
+
+    func testCursorMovementWakesDrowsyAndResetsTimer() {
+        let engine = makeEngine()
+        idle(engine, through: 0...35)
+        XCTAssertEqual(engine.state, .drowsy)
+        tick(engine, at: 36, cursorX: 2400) // cursor moved
+        XCTAssertEqual(engine.state, .idle)
+        idle(engine, through: 37...50) // 36+30=66, so no drowsiness yet
+        XCTAssertNotEqual(engine.state, .drowsy)
+    }
+
+    func testCursorMovementWakesDozing() {
+        let engine = makeEngine()
+        idle(engine, through: 0...65)
+        XCTAssertEqual(engine.state, .dozing)
+        tick(engine, at: 66, cursorX: 2400)
+        XCTAssertEqual(engine.state, .idle)
+    }
+
+    func testCursorMovementDoesNotWakeDeepSleep() {
+        let engine = makeEngine()
+        idle(engine, through: 0...95)
+        XCTAssertEqual(engine.state, .sleep)
+        tick(engine, at: 96, cursorX: 2400) // cursor moved
+        XCTAssertEqual(engine.state, .sleep, "deep sleep ignores the mouse")
+        tick(engine, at: 97, cursorX: 2400)
+        XCTAssertEqual(engine.state, .sleep, "and stays asleep on later ticks")
+    }
+
+    func testKeystrokeWakesDeepSleep() {
+        let engine = makeEngine()
+        idle(engine, through: 0...95)
+        engine.handle(.keystroke(now: 96))
+        XCTAssertEqual(engine.state, .idle)
+    }
+
+    func testClickWakesDeepSleepViaBoop() {
+        let engine = makeEngine()
+        idle(engine, through: 0...95)
+        engine.handle(.clicked(now: 96))
+        XCTAssertEqual(engine.state, .boop)
+        engine.handle(.animationFinished(now: 97))
+        XCTAssertEqual(engine.state, .idle)
+        tick(engine, at: 98)
+        XCTAssertEqual(engine.state, .idle, "activity reset the wind-down timer")
+    }
+
+    func testAwakenWakesEveryStage() {
+        for threshold: TimeInterval in [31, 61, 91] {
+            let engine = makeEngine()
+            idle(engine, through: 0...threshold)
+            engine.handle(.awaken(now: threshold + 1))
+            XCTAssertEqual(engine.state, .idle, "awaken failed at t=\(threshold)")
+        }
+    }
+
+    func testNoDrowsinessWhileClaudeIsActive() {
+        let engine = makeEngine()
+        engine.handle(.claudeStatus(.working, now: 0))
+        idle(engine, through: 0...120) // under the 180s staleness timeout
+        XCTAssertEqual(engine.state, .claudeWorking)
+    }
+
+    func testSittingStillWindsDown() {
+        let engine = makeEngine(sitRoll: 0.0) // wander always ends in a sit
+        idle(engine, through: 0...35)
+        XCTAssertEqual(engine.state, .drowsy, "sit is a calm state; the wind-down continues")
     }
 
     // MARK: Chase
