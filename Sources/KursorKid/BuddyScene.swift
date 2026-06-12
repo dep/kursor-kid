@@ -268,6 +268,8 @@ final class BuddyScene: SKScene {
             sprite.texture = SpriteTextures.startled[0]
         case .tossed:
             sprite.texture = SpriteTextures.startled[0]
+            let spinDir: CGFloat = tossVelocity.x >= 0 ? -1 : 1
+            sprite.run(.repeatForever(.rotate(byAngle: spinDir * .pi * 2, duration: 0.4)), withKey: "spin")
         case .dizzy:
             sprite.texture = SpriteTextures.startled[0]
         case .claudeThinking:
@@ -441,7 +443,22 @@ final class BuddyScene: SKScene {
     }
 
     private func spawnSpeedLines(direction: CGPoint) {
-        // implemented in Task 6
+        let angle = atan2(direction.y, direction.x)
+        for i in 0..<3 {
+            let line = SKSpriteNode(color: .white, size: CGSize(width: CGFloat(6 + i * 3), height: 2))
+            line.alpha = 0.8
+            line.zRotation = angle
+            let offset = CGPoint(
+                x: sprite.position.x - cos(angle) * CGFloat(10 + i * 8),
+                y: sprite.position.y + spriteHeight * 0.5 - sin(angle) * CGFloat(10 + i * 8)
+            )
+            line.position = offset
+            addChild(line)
+            line.run(.sequence([
+                .fadeOut(withDuration: 0.15),
+                .removeFromParent(),
+            ]))
+        }
     }
 
     // MARK: - Speech
