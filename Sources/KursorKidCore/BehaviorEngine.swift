@@ -312,6 +312,8 @@ public final class BehaviorEngine {
             state = .idle
             // Reset the wander timer so she doesn't immediately wander after waking.
             nextWanderAt = now + TimeInterval(random(config.wanderInterval))
+            // Clear stale far-cursor accrual so she doesn't instantly bolt on the next tick.
+            farSince = nil
         }
     }
 

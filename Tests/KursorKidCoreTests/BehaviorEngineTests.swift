@@ -271,6 +271,15 @@ final class BehaviorEngineTests: XCTestCase {
         XCTAssertEqual(engine.state, .drowsy, "sit is a calm state; the wind-down continues")
     }
 
+    func testKeystrokeWakeFromDrowsyDoesNotTriggerInstantChase() {
+        let engine = makeEngine(sitRoll: 0.0) // wander ends in a sit, letting farSince accrue
+        idle(engine, through: 0...55)
+        engine.handle(.keystroke(now: 56))
+        XCTAssertEqual(engine.state, .idle)
+        tick(engine, at: 57)
+        XCTAssertNotEqual(engine.state, .chaseCursor, "stale farSince must not cause a chase on wake")
+    }
+
     // MARK: Chase
 
     func testChasesParkedFarCursor() {
