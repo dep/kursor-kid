@@ -199,6 +199,8 @@ final class BuddyScene: SKScene {
         sprite.removeAction(forKey: "bounce")
         sprite.removeAction(forKey: "tipover")
         sprite.removeAction(forKey: "wobble")
+        sprite.removeAction(forKey: "spin")
+        if previous == .tossed { sprite.zRotation = 0 }
         if previous == .sleep, state != .sleep {
             // She was lying down — pop upright before the new state animates.
             sprite.zRotation = 0

@@ -110,7 +110,7 @@ public final class BehaviorEngine {
             handleKeystroke(now: now)
         case let .clicked(now):
             registerActivity(at: now)
-            if state != .dragged { state = .boop }
+            if state != .dragged, state != .tossed, state != .dizzy { state = .boop }
         case .dragStarted:
             state = .dragged
         case let .dragEnded(now):
@@ -140,7 +140,7 @@ public final class BehaviorEngine {
     private func handleClaudeStatus(_ status: ClaudeStatus?, now: TimeInterval) {
         claudeStatus = status
         claudeStatusAt = now
-        guard state != .dragged, state != .boop else { return }
+        guard state != .dragged, state != .boop, state != .tossed, state != .dizzy else { return }
         switch status {
         case .thinking: state = .claudeThinking
         case .working: state = .claudeWorking
@@ -273,6 +273,7 @@ public final class BehaviorEngine {
             if let since = typingSustainedSince {
                 if now - since >= config.typingSustain,
                    state != .dragged, state != .boop, state != .startled,
+                   state != .tossed, state != .dizzy,
                    !isClaudeState(state) {
                     state = .dance
                 }
